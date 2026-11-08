@@ -1332,8 +1332,9 @@ class Validator:
         for dp, _, fs in os.walk(root):
             for f in fs:
                 p = os.path.join(dp, f)
-                if len(os.path.abspath(p)) > MAX_PATH:
-                    self.col.error('BHY_PATH_TOO_LONG', f'Path is {len(os.path.abspath(p))} characters; Power BI Desktop '
+                full = os.path.realpath(p)  # long form of any 8.3 short name: the path Desktop opens
+                if len(full) > MAX_PATH:
+                    self.col.error('BHY_PATH_TOO_LONG', f'Path is {len(full)} characters; Power BI Desktop '
                                    f'cannot open files past the Windows {MAX_PATH + 1}-character limit: {p}', file=p)
 
 

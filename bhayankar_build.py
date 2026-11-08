@@ -238,14 +238,16 @@ class Build:
         ("path too long" in Desktop). When even a short name does not fit, the project moves to a short folder."""
         longest_table = max([len(t['name']) for t in (self.spec or {}).get('model', {}).get('tables', [])] + [40])
         tail = max(self.REPORT_TAIL, len('.SemanticModel\\definition\\tables\\') + longest_table + len('.tmdl'))
-        budget = self.MAX_PATH - len(os.path.abspath(self.pbip_dir)) - 1 - tail
+        # the full path Windows uses: a short 8.3 folder name (JOHNDO~1) is expanded (John.Doe); measuring the short
+        # form let a 261-character file through, which Desktop then could not open
+        budget = self.MAX_PATH - len(os.path.realpath(self.pbip_dir)) - 1 - tail
         if len(self.wb) <= budget:
             return self.wb
         if budget < 8:
             self.pbip_dir = self.fallback_folder()
             self.log.append(f'PATH TOO LONG for output\\{self.wb}\\pbip: project written to {self.pbip_dir} instead '
                             '(or set decisions.json "pbip_folder")')
-            budget = self.MAX_PATH - len(self.pbip_dir) - 1 - tail
+            budget = self.MAX_PATH - len(os.path.realpath(self.pbip_dir)) - 1 - tail
             if len(self.wb) <= budget:
                 return self.wb
         words, short = self.wb.split(), ''

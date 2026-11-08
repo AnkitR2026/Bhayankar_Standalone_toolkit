@@ -18,3 +18,5 @@ Forked from the Bhayankar toolkit (Kiro edition) at commit a365047, an earlier f
        Teradata, Redshift) unless a warehouse is configured; Tableau data source filters (Power Query row filters, plus
        page filters when the table filters others); value aliases as display columns; worksheet-tab pages keep their
        sheet filters; data-source-filter columns count as used. Not in Kiro.
+       1.6.0 also: path budget and validator measure the full Windows path (8.3 short names let a 261-char file
+       through; Desktop could not open it). First Power BI Desktop load check of 1.4-1.6 builds: 0 errors.
