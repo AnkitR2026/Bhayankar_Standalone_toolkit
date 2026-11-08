@@ -1,0 +1,244 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar extractor test fixture: synthetic workbook, not real data. Covers the features added 2026-10-30:
+     parameter/navigation actions, dynamic zone visibility, hidden zones, drill paths, folders, default sorts,
+     shelf-sort-v2, subtotals, trend lines, "compute using" fields, stories, sheet roles, joined grain, unknown XML. -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <datasources>
+    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
+      <column caption='Pick Region' datatype='string' name='[Parameter 1]' param-domain-type='any' role='measure' type='nominal' value='"East"'>
+        <calculation class='tableau' formula='"East"' />
+      </column>
+    </datasource>
+    <datasource caption='Orders' inline='true' name='federated.ord' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection name='c1'><connection class='snowflake' server='acct' dbname='DB' schema='S' /></named-connection></named-connections>
+        <relation join='inner' type='join'>
+          <clause type='join'><expression op='='><expression op='[ORDERS].[Order ID]' /><expression op='[LINES].[Order ID]' /></expression></clause>
+          <relation connection='c1' name='ORDERS' table='[S].[ORDERS]' type='table' />
+          <relation connection='c1' name='LINES' table='[S].[LINES]' type='table' />
+        </relation>
+      </connection>
+      <column datatype='string' name='[Order ID]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Region]' role='dimension' type='nominal' semantic-role='[State].[Name]' />
+      <column datatype='string' name='[Country]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Priority]' role='dimension' type='nominal' />
+      <column datatype='date' name='[Order Date]' role='dimension' type='ordinal' />
+      <column datatype='date' name='[Ship Date]' role='dimension' type='ordinal' />
+      <column aggregation='Sum' datatype='real' name='[Amount]' role='measure' type='quantitative' />
+      <column caption='Order Total' datatype='real' name='[Calculation_1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='{ FIXED [Order ID]: MIN([Amount]) }' />
+      </column>
+      <column caption='Sum of Order Totals' datatype='real' name='[Calculation_2]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([Calculation_1])' />
+      </column>
+      <column caption='Days to Ship' datatype='integer' name='[Calculation_3]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='DATEDIFF(&apos;day&apos;, [Order Date], [Ship Date])' />
+      </column>
+      <column caption='Avg Days to Ship' datatype='real' name='[Calculation_4]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='AVG(DATEDIFF(&apos;day&apos;, [Order Date], [Ship Date]))' />
+      </column>
+      <column caption='&quot; &quot;' datatype='string' name='[Calculation_5]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='&quot; &quot;' />
+      </column>
+      <column caption='Region Pick' datatype='string' name='[Calculation_6]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='[Region]' />
+      </column>
+      <metadata-records>
+        <metadata-record class='column'><remote-name>Order ID</remote-name><local-name>[Order ID]</local-name><parent-name>[ORDERS]</parent-name><family>ORDERS</family><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[ORDERS]</parent-name><family>ORDERS</family><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Country</remote-name><local-name>[Country]</local-name><parent-name>[ORDERS]</parent-name><family>ORDERS</family><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Priority</remote-name><local-name>[Priority]</local-name><parent-name>[ORDERS]</parent-name><family>ORDERS</family><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Order Date</remote-name><local-name>[Order Date]</local-name><parent-name>[ORDERS]</parent-name><family>ORDERS</family><local-type>date</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Ship Date</remote-name><local-name>[Ship Date]</local-name><parent-name>[LINES]</parent-name><family>LINES</family><local-type>date</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Amount</remote-name><local-name>[Amount]</local-name><parent-name>[LINES]</parent-name><family>LINES</family><local-type>real</local-type></metadata-record>
+      </metadata-records>
+      <drill-paths>
+        <drill-path name='Geography'><field>[Country]</field><field>[Region]</field></drill-path>
+      </drill-paths>
+      <folder name='Order Info' role='dimensions'>
+        <folder-item name='[Priority]' type='field' />
+        <folder-item name='[Calculation_2]' type='field' />
+      </folder>
+      <default-sorts>
+        <manual-sort column='[none:Priority:nk]' direction='ASC'>
+          <dictionary><bucket>"High"</bucket><bucket>"Medium"</bucket><bucket>"Low"</bucket></dictionary>
+        </manual-sort>
+      </default-sorts>
+      <future-feature name='x' />
+    </datasource>
+  </datasources>
+  <actions>
+    <edit-parameter-action caption='Set Region' name='[Action1]'>
+      <activation type='on-select' />
+      <source type='sheet' worksheet='Sales by Region' />
+      <agg-type type='attr' />
+      <clear-option type='keep-current-value' />
+      <params>
+        <param name='source-field' value='[federated.ord].[none:Region:nk]' />
+        <param name='target-parameter' value='[Parameters].[Parameter 1]' />
+      </params>
+    </edit-parameter-action>
+    <nav-action caption='Go to Detail' name='[Action2]'>
+      <source dashboard='Overview' type='sheet' worksheet='Sales by Region' />
+      <params><param name='sheet' value='Detail' /></params>
+    </nav-action>
+    <action caption='Open Link' name='[Action3]'>
+      <activation type='on-select' />
+      <source dashboard='Overview' type='sheet' worksheet='Link Shape' />
+      <link expression='https://example.invalid/orders?id=&lt;[federated.ord].[Order ID]&gt;' />
+    </action>
+  </actions>
+  <worksheets>
+    <worksheet name='Sales by Region'>
+      <table>
+        <view>
+          <datasources><datasource caption='Orders' name='federated.ord' /></datasources>
+          <datasource-dependencies datasource='federated.ord'>
+            <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+            <column datatype='string' name='[Priority]' role='dimension' type='nominal' />
+            <column aggregation='Sum' datatype='real' name='[Amount]' role='measure' type='quantitative' />
+            <column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Priority]' derivation='None' name='[none:Priority:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Amount]' derivation='Sum' name='[sum:Amount:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Amount]' derivation='Sum' name='[cum:sum:Amount:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Field' type='CumTotal'>
+                <order field='[federated.ord].[Priority]' />
+                <order field='[federated.ord].[Region]' />
+              </table-calc>
+            </column-instance>
+          </datasource-dependencies>
+          <shelf-sorts>
+            <shelf-sort-v2 dimension-to-sort='[federated.ord].[none:Region:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.ord].[sum:Amount:qk]' shelf='rows' />
+          </shelf-sorts>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane>
+            <view />
+            <mark class='Bar' />
+            <encodings><color column='[federated.ord].[none:Priority:nk]' /></encodings>
+            <trendline enabled='true' fit='linear' />
+          </pane>
+        </panes>
+        <rows>[federated.ord].[none:Region:nk]</rows>
+        <cols>([federated.ord].[sum:Amount:qk] + [federated.ord].[cum:sum:Amount:qk])</cols>
+        <subtotals><column>[federated.ord].[none:Region:nk]</column></subtotals>
+      </table>
+    </worksheet>
+    <worksheet name='Help'>
+      <table>
+        <view>
+          <datasources><datasource caption='Orders' name='federated.ord' /></datasources>
+          <datasource-dependencies datasource='federated.ord'>
+            <column caption='&quot; &quot;' datatype='string' name='[Calculation_5]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='&quot; &quot;' />
+            </column>
+            <column-instance column='[Calculation_5]' derivation='None' name='[none:Calculation_5:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane>
+            <view />
+            <mark class='Shape' />
+            <encodings><shape column='[federated.ord].[none:Calculation_5:nk]' /></encodings>
+            <customized-tooltip><formatted-text><run>Shows order amounts by region.</run></formatted-text></customized-tooltip>
+          </pane>
+        </panes>
+        <rows />
+        <cols />
+      </table>
+    </worksheet>
+    <worksheet name='Link Shape'>
+      <table>
+        <view>
+          <datasources><datasource caption='Orders' name='federated.ord' /></datasources>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view /><mark class='Shape' /></pane></panes>
+        <rows />
+        <cols />
+      </table>
+    </worksheet>
+    <worksheet name='Detail'>
+      <table>
+        <view>
+          <datasources><datasource caption='Orders' name='federated.ord' /></datasources>
+          <datasource-dependencies datasource='federated.ord'>
+            <column datatype='string' name='[Order ID]' role='dimension' type='nominal' />
+            <column caption='Sum of Order Totals' datatype='real' name='[Calculation_2]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SUM([Calculation_1])' />
+            </column>
+            <column caption='Avg Days to Ship' datatype='real' name='[Calculation_4]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='AVG(DATEDIFF(&apos;day&apos;, [Order Date], [Ship Date]))' />
+            </column>
+            <column caption='Region Pick' datatype='string' name='[Calculation_6]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='[Region]' />
+            </column>
+            <column-instance column='[Order ID]' derivation='None' name='[none:Order ID:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_2]' derivation='User' name='[usr:Calculation_2:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_4]' derivation='User' name='[usr:Calculation_4:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_6]' derivation='None' name='[none:Calculation_6:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane>
+            <view />
+            <mark class='Text' />
+            <encodings><text column='[federated.ord].[usr:Calculation_2:qk]' /><text column='[federated.ord].[usr:Calculation_4:qk]' /></encodings>
+          </pane>
+        </panes>
+        <rows>([federated.ord].[none:Order ID:nk] / [federated.ord].[none:Calculation_6:nk])</rows>
+        <cols />
+      </table>
+    </worksheet>
+  </worksheets>
+  <dashboards>
+    <dashboard name='Overview'>
+      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' />
+      <zones>
+        <zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'>
+          <zone h='60000' id='2' name='Sales by Region' w='100000' x='0' y='0' />
+          <zone h='30000' id='3' name='Detail' w='50000' x='0' y='60000' />
+          <zone h='30000' hidden-by-user='true' id='4' name='Help' w='20000' x='50000' y='60000' />
+          <zone h='10000' id='5' name='Link Shape' w='10000' x='90000' y='90000' />
+          <zone h='10000' id='6' type-v2='hologram' w='10000' x='70000' y='90000' />
+        </zone>
+      </zones>
+      <simple-id uuid='{DASH-0001}' />
+    </dashboard>
+    <dashboard name='Story 1' type='storyboard'>
+      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' />
+      <zones>
+        <zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'>
+          <zone h='100000' id='2' type-v2='flipboard' w='100000' x='0' y='0'>
+            <flipboard active-id='1'>
+              <story-points>
+                <story-point caption='The big picture' captured-sheet='Overview' id='1' />
+                <story-point caption='Order detail' captured-sheet='Detail' id='2' />
+              </story-points>
+            </flipboard>
+          </zone>
+        </zone>
+      </zones>
+      <simple-id uuid='{STORY-0001}' />
+    </dashboard>
+  </dashboards>
+  <datagraph>
+    <graph>
+      <nodes>
+        <dashboard-zone-visibility-node dashboard-identifier='{DASH-0001}' node-guid='n1' visibility-input-guid='in-1' zone-id='3' />
+        <single-value-field-node fieldname='[Parameters].[Parameter 1]' fieldname-input-guid='f1' node-guid='n2' value-output-guid='out-1' />
+      </nodes>
+      <edges><edge from='out-1' to='in-1' /></edges>
+    </graph>
+  </datagraph>
+  <windows>
+    <window class='dashboard' name='Overview' />
+  </windows>
+</workbook>

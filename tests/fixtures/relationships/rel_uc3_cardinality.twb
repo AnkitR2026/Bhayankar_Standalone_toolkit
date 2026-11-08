@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar relationship fixture: synthetic workbook, not real data -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+
+  <datasources>
+    <datasource caption='Sales Model' inline='true' name='federated.rel0model1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='sqlprod' name='sqlserver.0aa'><connection class='sqlserver' dbname='SALES' schema='dbo' server='sqlprod' /></named-connection></named-connections>
+        <relation type='collection'>
+          <relation connection='sqlserver.0aa' name='ORDERS' table='[dbo].[ORDERS]' type='table' />
+          <relation connection='sqlserver.0aa' name='PRODUCTS' table='[dbo].[PRODUCTS]' type='table' />
+        </relation>
+        <cols>
+          <map key='[Order ID]' value='[ORDERS].[Order ID]' />
+          <map key='[Region]' value='[ORDERS].[Region]' />
+          <map key='[Category]' value='[ORDERS].[Category]' />
+          <map key='[Product ID]' value='[ORDERS].[Product ID]' />
+          <map key='[Order Date]' value='[ORDERS].[Order Date]' />
+          <map key='[Sales]' value='[ORDERS].[Sales]' />
+          <map key='[Product ID (PRODUCTS)]' value='[PRODUCTS].[Product ID]' />
+          <map key='[Product Name]' value='[PRODUCTS].[Product Name]' />
+          <map key='[Category ID]' value='[PRODUCTS].[Category ID]' />
+        </cols>
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Order ID</remote-name><local-name>[Order ID]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Category</remote-name><local-name>[Category]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Product ID</remote-name><local-name>[Product ID]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Order Date</remote-name><local-name>[Order Date]</local-name><parent-name>[ORDERS]</parent-name><local-type>date</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Sales</remote-name><local-name>[Sales]</local-name><parent-name>[ORDERS]</parent-name><local-type>real</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Product ID</remote-name><local-name>[Product ID (PRODUCTS)]</local-name><parent-name>[PRODUCTS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Product Name</remote-name><local-name>[Product Name]</local-name><parent-name>[PRODUCTS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Category ID</remote-name><local-name>[Category ID]</local-name><parent-name>[PRODUCTS]</parent-name><local-type>string</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Order ID]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Category]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Product ID]' role='dimension' type='nominal' />
+      <column datatype='date' name='[Order Date]' role='dimension' type='ordinal' />
+      <column aggregation='Sum' datatype='real' name='[Sales]' role='measure' type='quantitative' />
+      <column datatype='string' name='[Product ID (PRODUCTS)]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Product Name]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Category ID]' role='dimension' type='nominal' />
+      <object-graph>
+        <objects>
+          <object caption='ORDERS' id='ORDERS_0A1B'><properties context=''><relation connection='sqlserver.0aa' name='ORDERS' table='[dbo].[ORDERS]' type='table' /></properties></object>
+          <object caption='PRODUCTS' id='PRODUCTS_0A1B'><properties context=''><relation connection='sqlserver.0aa' name='PRODUCTS' table='[dbo].[PRODUCTS]' type='table' /></properties></object>
+        </objects>
+        <relationships>
+          <relationship>
+            <expression op='='><expression op='[Product ID]' /><expression op='[Product ID (PRODUCTS)]' /></expression>
+            <first-end-point object-id='ORDERS_0A1B' />
+            <second-end-point object-id='PRODUCTS_0A1B' referential-integrity='all' unique-key='true' />
+          </relationship>
+        </relationships>
+      </object-graph>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Model Check'>
+      <table>
+        <view>
+          <datasources><datasource caption='Sales Model' name='federated.rel0model1' /></datasources>
+          <datasource-dependencies datasource='federated.rel0model1'>
+            <column-instance column='[Product Name]' derivation='None' name='[none:Product Name:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Sales]' derivation='Sum' name='[sum:Sales:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Text' /></pane></panes>
+        <rows>[federated.rel0model1].[none:Product Name:nk]</rows>
+        <cols>[federated.rel0model1].[sum:Sales:qk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <windows>
+    <window class='worksheet' name='Model Check' />
+  </windows>
+</workbook>

@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar extractor test fixture: synthetic published data source (structure of a Tableau .tds) -->
+<datasource formatted-name='ORDERS SOURCE' inline='true' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <connection class='federated'>
+    <named-connections>
+      <named-connection caption='warehouse' name='sqlserver.1'>
+        <connection class='sqlserver' dbname='EDW' schema='dbo' server='warehouse.example.net' />
+      </named-connection>
+    </named-connections>
+    <relation join='left' type='join'>
+      <clause type='join'>
+        <expression op='='>
+          <expression op='[ORDERS_EDW].[ORDER_NUMBER]' />
+          <expression op='[LINES_EDW].[PARENT_ORDER]' />
+        </expression>
+      </clause>
+      <relation connection='sqlserver.1' name='ORDERS_EDW' table='[dbo].[ORDERS_EDW]' type='table' />
+      <relation connection='sqlserver.1' name='LINES_EDW' table='[dbo].[LINES_EDW]' type='table' />
+    </relation>
+    <cols>
+      <map key='[Order Number]' value='[ORDERS_EDW].[ORDER_NUMBER]' />
+      <map key='[Approved Date]' value='[ORDERS_EDW].[APPR_DATE]' />
+      <map key='[Order Status]' value='[ORDERS_EDW].[STATUS]' />
+      <map key='[Order ID]' value='[ORDERS_EDW].[ORDER_ID]' />
+      <map key='[Line Key]' value='[LINES_EDW].[LINE_KEY]' />
+      <map key='[Line Type]' value='[LINES_EDW].[LINE_TYPE]' />
+      <map key='[Hours]' value='[LINES_EDW].[HOURS_NO_TRAVEL]' />
+    </cols>
+  </connection>
+</datasource>

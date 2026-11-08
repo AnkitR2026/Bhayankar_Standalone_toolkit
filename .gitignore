@@ -1,0 +1,18 @@
+# client material and generated output never go into version control
+input/
+output/
+test_input/
+test_output/
+__pycache__/
+*.pyc
+*.twb
+*.twbx
+*.tds
+*.tdsx
+*.hyper
+!tests/fixtures/*.twb
+!tests/fixtures/*.tds
+!tests/fixtures/**/*.twb
+# client project history: kept local, not published
+docs/PROJECT_LOG.md
+docs/COMPARISON_Individual_Summary.md

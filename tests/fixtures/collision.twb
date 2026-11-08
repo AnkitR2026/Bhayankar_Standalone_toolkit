@@ -1,0 +1,92 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar extractor test fixture: synthetic workbook, not real data.
+     Covers: same calc name with different formulas in two data sources, USERNAME() per-user columns with
+     hard-coded logins, a relative-date filter with include-future / period-type-v2, a Measure Names colour palette,
+     and blending (two data sources in one sheet). -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <datasources>
+    <datasource caption='EMAILS ORG' inline='true' name='federated.aaa111' version='18.1'>
+      <connection class='federated'><named-connections /><relation name='EMAILS_ORG' table='[CYBER].[EMAILS_ORG]' type='table' /></connection>
+      <column datatype='string' name='[MGR_LOGIN]' role='dimension' type='nominal' />
+      <column datatype='string' name='[MGR_NAME]' role='dimension' type='nominal' />
+      <column datatype='datetime' name='[DATE_SENT]' role='dimension' type='ordinal' />
+      <column aggregation='Sum' datatype='integer' name='[CLICKED]' role='measure' type='quantitative' />
+      <column aggregation='Sum' datatype='integer' name='[SENT]' role='measure' type='quantitative' />
+      <column caption='Manager Level' datatype='string' name='[Calculation_10]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='IF USERNAME()=&apos;E001&apos; OR USERNAME()=&apos;E002&apos; THEN [MGR_NAME] ELSEIF USERNAME()=[MGR_LOGIN] THEN [MGR_NAME] END' />
+      </column>
+      <column caption='Officers' datatype='string' name='[Calculation_11]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='IF USERNAME()=&quot;E009&quot; THEN &quot;hide&quot; ELSE &quot;show&quot; END' />
+      </column>
+      <metadata-records>
+        <metadata-record class='column'><remote-name>MGR_LOGIN</remote-name><local-name>[MGR_LOGIN]</local-name><parent-name>[EMAILS_ORG]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>MGR_NAME</remote-name><local-name>[MGR_NAME]</local-name><parent-name>[EMAILS_ORG]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>DATE_SENT</remote-name><local-name>[DATE_SENT]</local-name><parent-name>[EMAILS_ORG]</parent-name><local-type>datetime</local-type></metadata-record>
+        <metadata-record class='measure'><remote-name>CLICKED</remote-name><local-name>[CLICKED]</local-name><parent-name>[EMAILS_ORG]</parent-name><local-type>integer</local-type></metadata-record>
+        <metadata-record class='measure'><remote-name>SENT</remote-name><local-name>[SENT]</local-name><parent-name>[EMAILS_ORG]</parent-name><local-type>integer</local-type></metadata-record>
+      </metadata-records>
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#20415b'><bucket>&quot;[federated.aaa111].[sum:CLICKED:qk]&quot;</bucket></map>
+            <map to='#c6e4e5'><bucket>&quot;[federated.aaa111].[sum:SENT:qk]&quot;</bucket></map>
+            <map to='#e15759'><bucket>&quot;[federated.aaa111].[sum:Calculation_99:qk]&quot;</bucket></map>
+          </encoding>
+        </style-rule>
+      </style>
+    </datasource>
+    <datasource caption='EMAILS DETAIL' inline='true' name='federated.bbb222' version='18.1'>
+      <connection class='federated'><named-connections /><relation name='EMAILS_DETAIL' table='[CYBER].[EMAILS_DETAIL]' type='table' /></connection>
+      <column datatype='string' name='[MGR_LOGIN]' role='dimension' type='nominal' />
+      <column datatype='string' name='[MGR_NAME]' role='dimension' type='nominal' />
+      <column caption='Manager Level' datatype='string' name='[Calculation_10]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='IF USERNAME()=&apos;E001&apos; THEN [MGR_NAME] ELSEIF USERNAME()=[MGR_LOGIN] THEN [MGR_NAME] END' />
+      </column>
+      <metadata-records>
+        <metadata-record class='column'><remote-name>MGR_LOGIN</remote-name><local-name>[MGR_LOGIN]</local-name><parent-name>[EMAILS_DETAIL]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>MGR_NAME</remote-name><local-name>[MGR_NAME]</local-name><parent-name>[EMAILS_DETAIL]</parent-name><local-type>string</local-type></metadata-record>
+      </metadata-records>
+    </datasource>
+    <datasource caption='EMAILS SPARE' inline='true' name='federated.ccc333' version='18.1'>
+      <connection class='federated'><named-connections /><relation name='EMAILS_SPARE' table='[CYBER].[EMAILS_SPARE]' type='table' /></connection>
+      <column datatype='string' name='[MGR_NAME]' role='dimension' type='nominal' />
+      <!-- unused copy of a calc that is used elsewhere: must not be listed as an orphan -->
+      <column caption='Manager Level' datatype='string' name='[Calculation_10]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='[MGR_NAME]' />
+      </column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Org View'>
+      <table>
+        <view>
+          <datasources><datasource caption='EMAILS ORG' name='federated.aaa111' /><datasource caption='EMAILS DETAIL' name='federated.bbb222' /></datasources>
+          <datasource-dependencies datasource='federated.aaa111'>
+            <column datatype='datetime' name='[DATE_SENT]' role='dimension' type='ordinal' />
+            <column-instance column='[Calculation_10]' derivation='None' name='[none:Calculation_10:nk]' pivot='key' type='nominal' />
+            <column-instance column='[CLICKED]' derivation='Sum' name='[sum:CLICKED:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[DATE_SENT]' derivation='None' name='[none:DATE_SENT:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='relative-date' column='[federated.aaa111].[none:DATE_SENT:qk]' first-period='-12' include-future='true' include-null='false' last-period='0' period-type-v2='month' />
+        </view>
+        <panes><pane id='1'><mark class='Bar' /></pane></panes>
+        <rows>[federated.aaa111].[none:Calculation_10:nk]</rows>
+        <cols>[federated.aaa111].[sum:CLICKED:qk]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='Detail View'>
+      <table>
+        <view>
+          <datasources><datasource caption='EMAILS DETAIL' name='federated.bbb222' /></datasources>
+          <datasource-dependencies datasource='federated.bbb222'>
+            <column-instance column='[Calculation_10]' derivation='None' name='[none:Calculation_10:nk]' pivot='key' type='nominal' />
+            <column-instance column='[MGR_NAME]' derivation='None' name='[none:MGR_NAME:nk]' pivot='key' type='nominal' />
+          </datasource-dependencies>
+        </view>
+        <panes><pane id='1'><mark class='Text' /></pane></panes>
+        <rows>([federated.bbb222].[none:Calculation_10:nk] / [federated.bbb222].[none:MGR_NAME:nk])</rows>
+        <cols />
+      </table>
+    </worksheet>
+  </worksheets>
+</workbook>

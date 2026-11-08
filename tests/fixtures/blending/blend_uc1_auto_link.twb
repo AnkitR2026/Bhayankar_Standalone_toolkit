@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar blending fixture: synthetic workbook, not real data -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+
+  <datasources>
+    <datasource caption='Orders' inline='true' name='federated.0orders1blend' version='18.1'>
+      <connection class='federated'><named-connections><named-connection caption='sqlprod' name='sqlserver.0aa'><connection class='sqlserver' dbname='SALES' schema='dbo' server='sqlprod' /></named-connection></named-connections><relation connection='sqlserver.0aa' name='ORDERS' table='[dbo].[ORDERS]' type='table' />
+      <metadata-records>
+        <metadata-record class='column'><remote-name>Order ID</remote-name><local-name>[Order ID]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Category</remote-name><local-name>[Category]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Order Date</remote-name><local-name>[Order Date]</local-name><parent-name>[ORDERS]</parent-name><local-type>date</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Sales</remote-name><local-name>[Sales]</local-name><parent-name>[ORDERS]</parent-name><local-type>real</local-type></metadata-record>
+      </metadata-records>
+      </connection>
+      <column datatype='string' name='[Order ID]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Category]' role='dimension' type='nominal' />
+      <column datatype='date' name='[Order Date]' role='dimension' type='ordinal' />
+      <column aggregation='Sum' datatype='real' name='[Sales]' role='measure' type='quantitative' />
+    </datasource>
+    <datasource caption='Sales Targets' inline='true' name='federated.1targets2blend' version='18.1'>
+      <connection class='federated'><named-connections><named-connection caption='Targets' name='excel-direct.0bb'><connection class='excel-direct' filename='C:/Data/Targets.xlsx' /></named-connection></named-connections><relation connection='excel-direct.0bb' name='TARGETS' table='[TARGETS$]' type='table' />
+      <metadata-records>
+        <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[TARGETS]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Target Type</remote-name><local-name>[Target Type]</local-name><parent-name>[TARGETS]</parent-name><local-type>string</local-type></metadata-record>
+        <metadata-record class='column'><remote-name>Target</remote-name><local-name>[Target]</local-name><parent-name>[TARGETS]</parent-name><local-type>real</local-type></metadata-record>
+      </metadata-records>
+      </connection>
+      <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+      <column datatype='string' name='[Target Type]' role='dimension' type='nominal' />
+      <column aggregation='Sum' datatype='real' name='[Target]' role='measure' type='quantitative' />
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sales vs Target'>
+      <table>
+        <view>
+          <datasources><datasource caption='Orders' name='federated.0orders1blend' /><datasource caption='Sales Targets' name='federated.1targets2blend' /></datasources>
+          <datasource-dependencies datasource='federated.0orders1blend'>
+            <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+            <column datatype='real' name='[Sales]' role='measure' type='quantitative' />
+            <column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Sales]' derivation='Sum' name='[sum:Sales:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <datasource-dependencies datasource='federated.1targets2blend'>
+            <column datatype='string' name='[Region]' role='dimension' type='nominal' />
+            <column datatype='real' name='[Target]' role='measure' type='quantitative' />
+            <column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Target]' derivation='Sum' name='[sum:Target:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view><breakdown value='auto' /></view>
+            <mark class='Bar' />
+            <encodings><tooltip column='[federated.1targets2blend].[sum:Target:qk]' /></encodings>
+          </pane>
+        </panes>
+        <rows>[federated.0orders1blend].[none:Region:nk]</rows>
+        <cols>[federated.0orders1blend].[sum:Sales:qk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <dashboards>
+    <dashboard name='Blend'>
+      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' sizing-mode='fixed' />
+      <zones><zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'><zone h='100000' id='2' name='Sales vs Target' w='100000' x='0' y='0' /></zone></zones>
+    </dashboard>
+  </dashboards>
+  <windows>
+    <window class='dashboard' name='Blend' />
+    <window class='worksheet' hidden='true' name='Sales vs Target' />
+  </windows>
+</workbook>

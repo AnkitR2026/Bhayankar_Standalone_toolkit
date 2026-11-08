@@ -1,0 +1,715 @@
+{
+ "source": "powerbi-report-author catalog (snapshot)",
+ "cli_version": "0.4.0",
+ "deprecated": {
+  "filledMap": {
+   "visualType": "filledMap",
+   "alternative": "azureMap",
+   "reason": "Legacy Bing Maps filled map visual - replaced by Azure Maps"
+  },
+  "map": {
+   "visualType": "map",
+   "alternative": "azureMap",
+   "reason": "Legacy Bing Maps visual - replaced by Azure Maps"
+  },
+  "qnaVisual": {
+   "visualType": "qnaVisual",
+   "reason": "Q&A visual is not supported in PBIR authoring workflows"
+  }
+ },
+ "legacy_do_not_create": {
+  "card": "cardVisual",
+  "multiRowCard": "cardVisual",
+  "table": "tableEx",
+  "matrix": "pivotTable",
+  "map": "azureMap",
+  "filledMap": "azureMap"
+ },
+ "visuals": {
+  "accessibleTable": {
+   "roles": {
+    "Rows": "Grouping",
+    "Columns": "Grouping",
+    "Values": "Measure"
+   },
+   "required": [],
+   "max": {}
+  },
+  "actionButton": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "advancedSlicerVisual": {
+   "roles": {
+    "Values": "Grouping",
+    "Label": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {
+    "Values": 1
+   }
+  },
+  "aiNarratives": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "animatedNumber": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "areaChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Y2": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "azureMap": {
+   "roles": {
+    "Category": "Grouping",
+    "Y": "GroupingOrMeasure",
+    "X": "GroupingOrMeasure",
+    "Series": "Grouping",
+    "Size": "Measure",
+    "Tooltips": "Measure",
+    "PathID": "Grouping",
+    "PointOrder": "Grouping"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Y": 1,
+    "X": 1,
+    "Series": 1,
+    "Size": 1,
+    "PathID": 1,
+    "PointOrder": 1
+   }
+  },
+  "barChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "basicShape": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "bookmarkNavigator": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "card": {
+   "roles": {
+    "Values": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {
+    "Values": 1
+   }
+  },
+  "cardVisual": {
+   "roles": {
+    "Data": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Data"
+   ],
+   "max": {}
+  },
+  "clusteredBarChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "clusteredColumnChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "columnChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "dataQueryVisual": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [],
+   "max": {}
+  },
+  "decompositionTreeVisual": {
+   "roles": {
+    "Analyze": "Measure",
+    "ExplainBy": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Analyze"
+   ],
+   "max": {
+    "Analyze": 1
+   }
+  },
+  "donutChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Category": 1,
+    "Series": 1
+   }
+  },
+  "filledMap": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "X": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Series": 1,
+    "Y": 1,
+    "X": 1
+   }
+  },
+  "filterSlicer": {
+   "roles": {
+    "Values": "Grouping"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "funnel": {
+   "roles": {
+    "Category": "Grouping",
+    "Y": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Category": 1
+   }
+  },
+  "gauge": {
+   "roles": {
+    "Y": "Measure",
+    "MinValue": "Measure",
+    "MaxValue": "Measure",
+    "TargetValue": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Y"
+   ],
+   "max": {
+    "Y": 1,
+    "MinValue": 1,
+    "MaxValue": 1,
+    "TargetValue": 1
+   }
+  },
+  "heatMap": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "GroupingOrMeasure",
+    "X": "GroupingOrMeasure",
+    "Size": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [],
+   "max": {
+    "Series": 1,
+    "Y": 1,
+    "X": 1,
+    "Size": 1
+   }
+  },
+  "hundredPercentStackedAreaChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "hundredPercentStackedBarChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "hundredPercentStackedColumnChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "image": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "keyDriversVisual": {
+   "roles": {
+    "Target": "GroupingOrMeasure",
+    "ExplainBy": "GroupingOrMeasure",
+    "Details": "Grouping"
+   },
+   "required": [],
+   "max": {
+    "Target": 1
+   }
+  },
+  "kpi": {
+   "roles": {
+    "Indicator": "Measure",
+    "TrendLine": "Grouping",
+    "Goal": "Measure"
+   },
+   "required": [
+    "Indicator"
+   ],
+   "max": {
+    "Indicator": 1,
+    "TrendLine": 1,
+    "Goal": 2
+   }
+  },
+  "lineChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Y2": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "lineClusteredColumnComboChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Y2": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "lineStackedColumnComboChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Y2": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "listSlicer": {
+   "roles": {
+    "Values": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "map": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "GroupingOrMeasure",
+    "X": "GroupingOrMeasure",
+    "Size": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Series": 1,
+    "Y": 1,
+    "X": 1,
+    "Size": 1
+   }
+  },
+  "matrix": {
+   "roles": {
+    "Rows": "Grouping",
+    "Columns": "Grouping",
+    "Values": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "multiRowCard": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "pageNavigator": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "pieChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Category": 1,
+    "Series": 1
+   }
+  },
+  "pivotTable": {
+   "roles": {
+    "Rows": "Grouping",
+    "Columns": "Grouping",
+    "Values": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "pythonVisual": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [],
+   "max": {}
+  },
+  "qnaVisual": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "rdlVisual": {
+   "roles": {
+    "parameterValues": "GroupingOrMeasure"
+   },
+   "required": [],
+   "max": {}
+  },
+  "realTimeLineChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure"
+   },
+   "required": [],
+   "max": {
+    "Category": 1,
+    "Series": 1
+   }
+  },
+  "ribbonChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "scatterChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "X": "GroupingOrMeasure",
+    "Y": "GroupingOrMeasure",
+    "Size": "Measure",
+    "Play": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "X",
+    "Y"
+   ],
+   "max": {
+    "Category": 1,
+    "Series": 1,
+    "Y": 1,
+    "Size": 1,
+    "Play": 1
+   }
+  },
+  "scorecard": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "scriptVisual": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [],
+   "max": {}
+  },
+  "shape": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "shapeMap": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Value": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category"
+   ],
+   "max": {
+    "Category": 1,
+    "Series": 1,
+    "Value": 1
+   }
+  },
+  "slicer": {
+   "roles": {
+    "Values": "Grouping"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "stackedAreaChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Series": "Grouping",
+    "Y": "Measure",
+    "Rows": "Grouping",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Series": 1
+   }
+  },
+  "table": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "tableEx": {
+   "roles": {
+    "Values": "GroupingOrMeasure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {}
+  },
+  "textSlicer": {
+   "roles": {
+    "Values": "Grouping"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {
+    "Values": 1
+   }
+  },
+  "textbox": {
+   "roles": {},
+   "required": [],
+   "max": {}
+  },
+  "treemap": {
+   "roles": {
+    "Group": "Grouping",
+    "Details": "Grouping",
+    "Values": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Values"
+   ],
+   "max": {
+    "Group": 1,
+    "Details": 1
+   }
+  },
+  "waterfallChart": {
+   "roles": {
+    "Category": "Grouping",
+    "Breakdown": "Grouping",
+    "Y": "Measure",
+    "Tooltips": "Measure"
+   },
+   "required": [
+    "Category",
+    "Y"
+   ],
+   "max": {
+    "Category": 1,
+    "Breakdown": 1,
+    "Y": 1
+   }
+  }
+ }
+}
