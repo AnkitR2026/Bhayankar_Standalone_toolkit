@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar source fixture: synthetic workbook, not real data -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+
+  <datasources>
+    <datasource caption='Snowflake Sales' inline='true' name='federated.sf1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='acct' name='snowflake.0a'><connection class='snowflake' dbname='SALESDB' schema='MART' server='acct.example.snowflakecomputing.com' warehouse='REPORTING_WH' /></named-connection></named-connections>
+        <relation connection='snowflake.0a' name='VW_SALES' table='[SALESDB].[MART].[VW_SALES]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[VW_SALES]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Amount</remote-name><local-name>[Amount]</local-name><parent-name>[VW_SALES]</parent-name><local-type>real</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Region]' role='dimension' type='nominal'></column>
+      <column aggregation='Sum' datatype='real' name='[Amount]' role='measure' type='quantitative'></column>
+    </datasource>
+    <datasource caption='Budget Workbook' inline='true' name='federated.xl1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='Budget' name='excel-direct.0b'><connection class='excel-direct' filename='C:/Data/Budget.xlsx' /></named-connection></named-connections>
+        <relation connection='excel-direct.0b' name='Budget' table='[Budget$]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Dept</remote-name><local-name>[Dept]</local-name><parent-name>[Budget]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Budget</remote-name><local-name>[Budget]</local-name><parent-name>[Budget]</parent-name><local-type>real</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Dept]' role='dimension' type='nominal'></column>
+      <column aggregation='Sum' datatype='real' name='[Budget]' role='measure' type='quantitative'></column>
+    </datasource>
+    <datasource caption='Rates CSV' inline='true' name='federated.tx1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='rates' name='textscan.0c'><connection class='textscan' directory='C:/Data' filename='rates.csv' /></named-connection></named-connections>
+        <relation connection='textscan.0c' name='rates.csv' table='[rates#csv]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Currency</remote-name><local-name>[Currency]</local-name><parent-name>[rates.csv]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Rate</remote-name><local-name>[Rate]</local-name><parent-name>[rates.csv]</parent-name><local-type>real</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Currency]' role='dimension' type='nominal'></column>
+      <column aggregation='Sum' datatype='real' name='[Rate]' role='measure' type='quantitative'></column>
+    </datasource>
+    <datasource caption='SQL Orders' inline='true' name='federated.sq1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='sqlprod' name='sqlserver.0d'><connection class='sqlserver' dbname='SALES' schema='dbo' server='sqlprod.example.local' /></named-connection></named-connections>
+        <relation connection='sqlserver.0d' name='ORDERS' table='[dbo].[ORDERS]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Category</remote-name><local-name>[Category]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Sales</remote-name><local-name>[Sales]</local-name><parent-name>[ORDERS]</parent-name><local-type>real</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Category]' role='dimension' type='nominal'></column>
+      <column aggregation='Sum' datatype='real' name='[Sales]' role='measure' type='quantitative'></column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Snowflake Sheet'>
+      <table>
+        <view>
+          <datasources><datasource caption='Snowflake Sales' name='federated.sf1' /></datasources>
+          <datasource-dependencies datasource='federated.sf1'><column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' /><column-instance column='[Amount]' derivation='Sum' name='[sum:Amount:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.sf1].[none:Region:nk]</rows>
+        <cols>[federated.sf1].[sum:Amount:qk]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='Excel Sheet'>
+      <table>
+        <view>
+          <datasources><datasource caption='Budget Workbook' name='federated.xl1' /></datasources>
+          <datasource-dependencies datasource='federated.xl1'><column-instance column='[Dept]' derivation='None' name='[none:Dept:nk]' pivot='key' type='nominal' /><column-instance column='[Budget]' derivation='Sum' name='[sum:Budget:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.xl1].[none:Dept:nk]</rows>
+        <cols>[federated.xl1].[sum:Budget:qk]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='CSV Sheet'>
+      <table>
+        <view>
+          <datasources><datasource caption='Rates CSV' name='federated.tx1' /></datasources>
+          <datasource-dependencies datasource='federated.tx1'><column-instance column='[Currency]' derivation='None' name='[none:Currency:nk]' pivot='key' type='nominal' /><column-instance column='[Rate]' derivation='Sum' name='[sum:Rate:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.tx1].[none:Currency:nk]</rows>
+        <cols>[federated.tx1].[sum:Rate:qk]</cols>
+      </table>
+    </worksheet>
+    <worksheet name='SQL Sheet'>
+      <table>
+        <view>
+          <datasources><datasource caption='SQL Orders' name='federated.sq1' /></datasources>
+          <datasource-dependencies datasource='federated.sq1'><column-instance column='[Category]' derivation='None' name='[none:Category:nk]' pivot='key' type='nominal' /><column-instance column='[Sales]' derivation='Sum' name='[sum:Sales:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.sq1].[none:Category:nk]</rows>
+        <cols>[federated.sq1].[sum:Sales:qk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <windows>
+    <window class='worksheet' name='Snowflake Sheet' />
+    <window class='worksheet' name='Excel Sheet' />
+    <window class='worksheet' name='CSV Sheet' />
+    <window class='worksheet' name='SQL Sheet' />
+  </windows>
+</workbook>

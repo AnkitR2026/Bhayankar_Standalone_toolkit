@@ -1,4 +1,4 @@
-Bhayankar Standalone Toolkit 1.5.0 (2026-11-08)
+Bhayankar Standalone Toolkit 1.6.0 (2026-11-08)
 Forked from the Bhayankar toolkit (Kiro edition) at commit a365047, an earlier fix branch.
 1.1.0: the 29 Kiro bug-hunt fixes of 2026-11-02 merged in (Kiro commit 0470900, branch fix/bug-hunt-2026-11-02).
 1.2.0: improvement round of 2026-11-04 (docs\PROJECT_LOG.md): sheet filters, joins without the .tds, visual fields,
@@ -14,3 +14,7 @@ Forked from the Bhayankar toolkit (Kiro edition) at commit a365047, an earlier f
 1.5.0: Tableau relationships (logical layer) -> Power BI relationships (docs/PROJECT_LOG.md "Relationships (1.5.0)"):
        keys resolved from Tableau field names, compound keys, cardinality One, many-to-many default, calc-column keys,
        inequality = DECISION NEEDED. Not in Kiro.
+1.6.0: Power Query connector per Tableau source type (Snowflake, SQL Server, Excel, text, Oracle, PostgreSQL, MySQL,
+       Teradata, Redshift) unless a warehouse is configured; Tableau data source filters (Power Query row filters, plus
+       page filters when the table filters others); value aliases as display columns; worksheet-tab pages keep their
+       sheet filters; data-source-filter columns count as used. Not in Kiro.

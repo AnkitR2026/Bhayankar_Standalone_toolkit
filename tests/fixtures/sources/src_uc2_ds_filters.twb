@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar source fixture: synthetic workbook, not real data -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+
+  <datasources>
+    <datasource caption='Filtered Orders' inline='true' name='federated.dsf1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='sqlprod' name='sqlserver.0d'><connection class='sqlserver' dbname='SALES' schema='dbo' server='sqlprod.example.local' /></named-connection></named-connections>
+        <relation type='collection'><relation connection='sqlserver.0d' name='ORDERS' table='[dbo].[ORDERS]' type='table' /><relation connection='sqlserver.0d' name='REGIONS' table='[dbo].[REGIONS]' type='table' /></relation><cols><map key='[Region]' value='[ORDERS].[Region]' /><map key='[Order Date]' value='[ORDERS].[Order Date]' /><map key='[Sales]' value='[ORDERS].[Sales]' /><map key='[Region (REGIONS)]' value='[REGIONS].[Region]' /><map key='[Zone]' value='[REGIONS].[Zone]' /></cols>
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Order Date</remote-name><local-name>[Order Date]</local-name><parent-name>[ORDERS]</parent-name><local-type>date</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Sales</remote-name><local-name>[Sales]</local-name><parent-name>[ORDERS]</parent-name><local-type>real</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region (REGIONS)]</local-name><parent-name>[REGIONS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Zone</remote-name><local-name>[Zone]</local-name><parent-name>[REGIONS]</parent-name><local-type>string</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Region]' role='dimension' type='nominal'></column>
+      <column datatype='date' name='[Order Date]' role='dimension' type='nominal'></column>
+      <column aggregation='Sum' datatype='real' name='[Sales]' role='measure' type='quantitative'></column>
+      <column datatype='string' name='[Region (REGIONS)]' role='dimension' type='nominal'></column>
+      <column datatype='string' name='[Zone]' role='dimension' type='nominal'></column>
+      <filter class='categorical' column='[federated.dsf1].[Region]'><groupfilter function='union' user:ui-enumeration='inclusive'><groupfilter function='member' level='[Region]' member='&quot;East&quot;' /><groupfilter function='member' level='[Region]' member='&quot;West&quot;' /></groupfilter></filter>
+      <filter class='quantitative' column='[federated.dsf1].[Order Date]' included-values='in-range'><min>#2024-01-01#</min><max>#2025-12-31#</max></filter>
+      <filter class='quantitative' column='[federated.dsf1].[Sales]' included-values='non-null' />
+      <filter class='categorical' column='[federated.dsf1].[Zone]'><groupfilter function='member' level='[Zone]' member='&quot;Domestic&quot;' user:ui-enumeration='inclusive' /></filter>
+      <object-graph><objects><object caption='ORDERS' id='O_1'><properties context=''><relation connection='sqlserver.0d' name='ORDERS' table='[dbo].[ORDERS]' type='table' /></properties></object><object caption='REGIONS' id='R_1'><properties context=''><relation connection='sqlserver.0d' name='REGIONS' table='[dbo].[REGIONS]' type='table' /></properties></object></objects><relationships><relationship><expression op='='><expression op='[Region]' /><expression op='[Region (REGIONS)]' /></expression><first-end-point object-id='O_1' /><second-end-point object-id='R_1' unique-key='true' /></relationship></relationships></object-graph>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sales by Zone'>
+      <table>
+        <view>
+          <datasources><datasource caption='Filtered Orders' name='federated.dsf1' /></datasources>
+          <datasource-dependencies datasource='federated.dsf1'><column-instance column='[Zone]' derivation='None' name='[none:Zone:nk]' pivot='key' type='nominal' /><column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' /><column-instance column='[Sales]' derivation='Sum' name='[sum:Sales:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.dsf1].[none:Zone:nk] / [federated.dsf1].[none:Region:nk]</rows>
+        <cols>[federated.dsf1].[sum:Sales:qk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <windows>
+    <window class='worksheet' name='Sales by Zone' />
+  </windows>
+</workbook>

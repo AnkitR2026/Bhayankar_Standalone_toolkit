@@ -512,6 +512,108 @@ class Build:
         self.build_measures()
         self.load_guard()
         self.filter_directions()
+        self.datasource_filters()
+        self.value_aliases()
+
+    def value_aliases(self):
+        """Tableau value aliases (a member shown under another name: "Anna Andreadi" as "Devi A.") -> a Power Query
+        display column '<column> (alias)' beside the source column. Visual groupings (axis, legend, rows / columns)
+        show it; filters, slicers and DAX keep the source column, whose raw values Tableau's own filters and formulas
+        compare against. It sorts like the source column when each alias stands for one value."""
+        amap = {}
+        for c in self.digest.get('columns', []):
+            if c.get('aliases') and c.get('table'):
+                amap[self.remap(c['table'], c['name'])] = c['aliases']
+        if not amap:
+            return
+        remap = {}
+        for (tn, cn), aliases in amap.items():
+            t = self.tables.get(tn)
+            col = next((c for c in (t or {}).get('columns', []) if cn in (c['name'], c.get('caption'))), None)
+            if col is None or not col.get('source_column') or col.get('derived'):
+                continue
+            pairs = {k.strip('"').replace('""', '"'): v for k, v in aliases.items()}
+            name = f'{col["name"]} (alias)'
+            if any(c['name'].lower() == name.lower() for c in t['columns'] + t['calc_columns']):
+                continue
+            src = col['source_column']
+            rec = ', '.join(f'{mid(k)} = {mstr(v)}' for k, v in pairs.items())
+            t['steps'].append((f'Added {name[:40]}', f'Table.AddColumn({{prev}}, {mstr(name)}, each if {mfield(src)} = null then null '
+                                                      f'else Record.FieldOrDefault([{rec}], Text.From({mfield(src)}), Text.From({mfield(src)})), type nullable text)'))
+            new = {'name': name, 'source_column': name, 'datatype': 'string', 'derived': True}
+            if len(set(pairs.values())) == len(pairs) and not set(pairs.values()) & (set(pairs) - set(pairs.values())):
+                new['sort_by'] = col.get('sort_by') or col['name']  # one alias per value: sorts like the source column
+            t['columns'].append(new)
+            if tn in getattr(self, 'model_cols', {}):  # the report guard's list of written columns (made earlier)
+                self.model_cols[tn].add(name)
+            remap[(tn, col['name'])] = (tn, name)
+            self.log.append(f'{tn}[{col["name"]}]: {len(pairs)} Tableau value alias(es) -> display column [{name}] on visual '
+                            'axes / legends / rows; filters and slicers keep the source values')
+        grouping = ('Category', 'Series', 'Rows', 'Columns', 'Legend', 'Axis', 'Values', 'Details')
+        for p in self.spec['pages']:
+            for v in p.get('visuals', []):
+                for role, fl in (v.get('roles') or {}).items():
+                    if role not in grouping:
+                        continue
+                    for f in fl:
+                        hit = remap.get((f.get('table'), f.get('name'))) if f.get('kind') == 'Column' else None
+                        if hit:
+                            f['table'], f['name'] = hit
+
+    @staticmethod
+    def m_literal(v, dtype):
+        """Tableau filter value ('East', 750, #2021-09-01#, true) -> Power Query literal of the column's type."""
+        s = str(v).strip()
+        m = re.fullmatch(r'#?(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?#?', s)
+        if m and dtype in ('date', 'datetime'):
+            y, mo, d, h, mi, se = (int(x) if x else 0 for x in m.groups())
+            return f'#date({y}, {mo}, {d})' if dtype == 'date' else f'#datetime({y}, {mo}, {d}, {h}, {mi}, {se})'
+        if dtype in ('integer', 'real') and re.fullmatch(r'-?\d+(\.\d+)?', s):
+            return s
+        if dtype == 'boolean' and s.lower() in ('true', 'false'):
+            return s.lower()
+        return mstr(s.strip('"'))
+
+    def datasource_filters(self):
+        """Tableau data source filters: rows the whole data source never shows. A source column -> Power Query row
+        filter on its table (the rows never load). When that table filters others (the one side of a relationship) or
+        the field is not a source column (calc column, relative date), the filter also goes on every page, so related
+        tables follow it as Tableau's joined rows did. Aggregate (measure) filters: DECISION NEEDED."""
+        ones = {b for _, _, b, _ in self.relationships}
+        for f in self.spec['model'].get('datasource_filters') or []:
+            fr, kind = f.get('field') or {}, f.get('type')
+            where = f'data source filter [{fr.get("name")}] ({f.get("datasource")}: {f.get("tableau")})'
+            if kind in ('All', None):
+                continue
+            if fr.get('kind') != 'Column' or not fr.get('table'):
+                self.log.append(f'DECISION NEEDED: {where}: not a column (aggregate or unresolved): apply it by hand')
+                continue
+            tn, cn = self.remap(fr['table'], fr['name'])  # merged tables / kept source names
+            fr = {**fr, 'table': tn, 'name': cn}
+            f = {**f, 'field': fr}
+            t = self.tables.get(tn)
+            col = next((c for c in (t or {}).get('columns', []) if c['name'] == cn), None)
+            cond = None
+            if col is not None and col.get('source_column') and not col.get('derived'):
+                x, dt = mfield(col['source_column']), col.get('datatype')
+                if kind == 'Categorical' and f.get('values'):
+                    cond = f'List.Contains({{{", ".join(self.m_literal(v, dt) for v in f["values"])}}}, {x})'
+                    cond = f'not {cond}' if f.get('inverted') else cond
+                elif kind == 'Range' and (f.get('lo') is not None or f.get('hi') is not None):
+                    parts = ([f'{x} >= {self.m_literal(f["lo"], dt)}'] if f.get('lo') is not None else []) + \
+                            ([f'{x} <= {self.m_literal(f["hi"], dt)}'] if f.get('hi') is not None else [])
+                    cond = ' and '.join([f'{x} <> null'] + parts)
+                elif kind == 'NotBlank':
+                    cond = f'{x} <> null'
+                elif kind == 'Blank':
+                    cond = f'{x} = null'
+            if cond:
+                t['steps'].append((f'Data source filter {col["source_column"][:30]}', f'Table.SelectRows({{prev}}, each {cond})'))
+                self.log.append(f'{where}: Power Query row filter on {t["name"]}')
+            if not cond or t['name'] in ones:
+                for p in self.spec['pages']:
+                    p.setdefault('page_filters', []).append({k: v for k, v in f.items() if k != 'datasource'})
+                self.log.append(f'{where}: filter on every page' + (f' ({t["name"]} filters related tables)' if cond else ''))
 
     # ---------- data blending ----------
     def blend_column(self, table, name, source, dtype):
@@ -1648,6 +1750,105 @@ class Build:
                 out.append((src, target))
         return out
 
+    # ---------- source connectors ----------
+    def source_connections(self):
+        """relation alias -> (relation, Tableau connection) for every table a workbook (or its .tds) reads: plain and
+        joined relations and the tables behind each logical object (relationships)."""
+        if getattr(self, '_src_conns', None) is not None:
+            return self._src_conns
+        out = {}
+        for ds in (self.digest or {}).get('datasources', []):
+            c = ds.get('connection') or {}
+            src = c.get('tds') or c
+            named = src.get('named') or []
+
+            def walk(r):
+                if not r:
+                    return
+                for x in r.get('inputs') or r.get('union') or []:
+                    walk(x)
+                if r.get('alias') and r.get('table'):
+                    conn = next((n for n in named if n.get('name') and n.get('name') == r.get('connection')), None)
+                    if conn is None and len(named) == 1:
+                        conn = named[0]
+                    out.setdefault(r['alias'], (r, conn))
+                    # a text file's relation is 'rates.csv' / [rates#csv]; the model table is 'rates'
+                    out.setdefault(re.sub(r'\.(csv|txt|tsv)$', '', r['alias'], flags=re.I), (r, conn))
+            walk(src.get('relations'))
+            for r in (src.get('physical_by_object') or {}).values():
+                walk(r)
+        self._src_conns = out
+        return out
+
+    def connector_mode(self):
+        """'warehouse': every table from the target warehouse (WarehouseServer / WarehouseDatabase, SQL endpoint), as
+        before; 'source': each table through the connector of the source Tableau read it from (Snowflake, Excel...).
+        sources.json "connector" decides; without it: warehouse when a warehouse server is set, else source."""
+        m = (self.sources or {}).get('connector')
+        if m in ('warehouse', 'source'):
+            return m
+        return 'warehouse' if ((self.sources or {}).get('warehouse') or {}).get('server') else 'source'
+
+    def source_expr(self, t, sql=None):
+        """Power Query that reads table t (or runs its custom SQL) from its Tableau source with the matching connector,
+        or None (published source without .tds, unknown type, warehouse mode): the warehouse SourceTable then."""
+        if self.connector_mode() != 'source':
+            return None
+        rel, conn = self.source_connections().get(t['source'], (None, None))
+        if not conn or not rel:
+            return None
+        cls = (conn.get('class') or '').lower()
+        parts = [p for p in re.findall(r'\[((?:[^\]]|\]\])+)\]', rel.get('table') or '')] or [rel.get('table') or t['source']]
+        name = parts[-1].replace(']]', ']')
+        schema = parts[-2] if len(parts) > 1 else conn.get('schema')
+        db = parts[-3] if len(parts) > 2 else conn.get('dbname')
+        srv = mstr(conn.get('server') or '')
+        nav = lambda keys: ''.join('{[' + ', '.join(f'{k} = {mstr(v)}' for k, v in kv) + ']}[Data]' for kv in keys)
+        if cls == 'sqlserver':
+            root = f'Sql.Database({srv}, {mstr(db or "")})'
+            item = nav([[('Schema', schema or 'dbo'), ('Item', name)]])
+        elif cls == 'snowflake':
+            # Name only (no Kind): the same lookup finds a table or a view
+            root = f'Snowflake.Databases({srv}, {mstr(conn.get("warehouse") or "")})' + nav([[('Name', db or '')]])
+            item = nav([[('Name', schema or 'PUBLIC')], [('Name', name)]])
+        elif cls in ('postgres', 'postgresql'):
+            root = f'PostgreSQL.Database({srv}, {mstr(db or "")})'
+            item = nav([[('Schema', schema or 'public'), ('Item', name)]])
+        elif cls == 'oracle':
+            s = conn.get('server') or ''
+            root = f'Oracle.Database({mstr(s + ("/" + conn["service"] if conn.get("service") else ""))})'
+            item = nav([[('Schema', schema or ''), ('Item', name)]])
+        elif cls == 'teradata':
+            root = f'Teradata.Database({srv})'
+            item = nav([[('Schema', schema or db or ''), ('Item', name)]])
+        elif cls == 'mysql':
+            root = f'MySQL.Database({srv}, {mstr(db or "")})'
+            item = nav([[('Schema', db or ''), ('Item', name)]])
+        elif cls == 'redshift':
+            root = f'AmazonRedshift.Database({srv}, {mstr(db or "")})'
+            item = nav([[('Name', schema or 'public')], [('Name', name)]])
+        elif cls == 'excel-direct' and not sql:
+            sheet = name[:-1] if name.endswith('$') else name
+            kind = ', Kind = "Sheet"' if name.endswith('$') else ''
+            self.log.append(f'{t["name"]}: reads Excel {conn.get("filename") or "(file not recorded)"} sheet "{sheet}" (Tableau source)')
+            return (f'Table.PromoteHeaders(Excel.Workbook(File.Contents({mstr(conn.get("filename") or "")}), null, true)'
+                    f'{{[Item = {mstr(sheet)}{kind}]}}[Data], [PromoteAllScalars = true])')
+        elif cls == 'textscan' and not sql:
+            d = conn.get('directory') or ''
+            path = (d.rstrip('/\\') + ('/' if '/' in d else '\\') if d else '') + (conn.get('filename') or name.replace('#', '.'))
+            return (f'Table.PromoteHeaders(Csv.Document(File.Contents({mstr(path)}), [Delimiter = ",", Encoding = 65001, '
+                    'QuoteStyle = QuoteStyle.Csv]), [PromoteAllScalars = true])')
+        else:
+            if cls not in ('sqlproxy', ''):
+                self.log.append(f'DECISION NEEDED: {t["name"]}: Tableau source type "{cls}" has no connector mapping; it reads '
+                                'the warehouse (SourceTable). Set the Power Query source by hand')
+            return None
+        self.log.append(f'{t["name"]}: reads {cls} {conn.get("server") or ""} {".".join(x for x in (db, schema, name) if x)} '
+                        '(Tableau source connector; credentials are asked on the first refresh)')
+        if sql:
+            return f'Value.NativeQuery({root}, {mstr(sql)}, null, [EnableFolding = true])'
+        return root + item
+
     def m_partition(self, t):
         if t.get('m_lines'):  # a table this build makes from other tables (blend shared dimension)
             return t['m_lines']
@@ -1680,10 +1881,15 @@ class Build:
         sample_expr = f'SampleTable({mstr(sample_file)})'
         for s in sample_steps:
             sample_expr = s.replace('{prev}', sample_expr)
+        own = self.source_expr(t, sql)  # the Tableau source's own connector ('source' mode), else None
         if sql:
-            steps.append(('Read source rows', f'if UseSampleData then {sample_expr} else Value.NativeQuery(Sql.Database(WarehouseServer, WarehouseDatabase), {mstr(sql)}, null, [EnableFolding = true])'))
-            self.log.append(f'{t["name"]}: custom SQL from the .tds runs as a native query in warehouse mode; check the SQL dialect '
-                            f'(Tableau source may not be T-SQL): {sql[:90]}')
+            native = own or f'Value.NativeQuery(Sql.Database(WarehouseServer, WarehouseDatabase), {mstr(sql)}, null, [EnableFolding = true])'
+            steps.append(('Read source rows', f'if UseSampleData then {sample_expr} else {native}'))
+            if not own:
+                self.log.append(f'{t["name"]}: custom SQL from the .tds runs as a native query in warehouse mode; check the SQL '
+                                f'dialect (Tableau source may not be T-SQL): {sql[:90]}')
+        elif own:
+            steps.append(('Read source rows', f'if UseSampleData then {sample_expr} else {own}'))
         else:
             src_table = (tds_rel.get('table') or rel).split('.')[-1].strip('[]')
             if sample_steps:

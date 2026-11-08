@@ -437,15 +437,20 @@ class Workbook:
                 out['path'] = rl.get('path'), rl.get('id')
             return out
         out['published'] = False
-        out['named'] = [{'name': nc.get('name'), 'class': nc.find('connection').get('class'),
-                         'server': nc.find('connection').get('server'),
-                         'dbname': nc.find('connection').get('dbname'),
-                         'schema': nc.find('connection').get('schema')}
+        # what a Power Query connector needs per source type (Snowflake warehouse, Excel / text file, Oracle service)
+        extra = ('warehouse', 'filename', 'directory', 'service', 'port')
+
+        def info(c, name=None):
+            d = {'class': c.get('class'), 'server': c.get('server'), 'dbname': c.get('dbname'), 'schema': c.get('schema')}
+            if name is not None:
+                d = {'name': name, **d}
+            d.update({k: c.get(k) for k in extra if c.get(k)})
+            return d
+        out['named'] = [info(nc.find('connection'), nc.get('name'))
                         for nc in conn.findall('./named-connections/named-connection')
                         if nc.find('connection') is not None]
         if not out['named']:
-            out['named'] = [{'class': cls, 'server': conn.get('server'), 'dbname': conn.get('dbname'),
-                             'schema': conn.get('schema')}]
+            out['named'] = [info(conn)]
         rel = conn.find('./relation')
         out['relations'] = self._relation(rel) if rel is not None else None
         # Tableau 2020.2+ logical layer (relationships)
@@ -884,7 +889,11 @@ class Workbook:
                             add((ds, cn), 'action:' + (a.get('caption') or a.get('name')))
         for d in self.ds.values():
             for f in d['filters']:
-                k = (d['name'], strip_brackets(f.get('column', '').split('].[')[-1]))
+                # '[ds].[Order Date]' or '[ds].[none:Order Date:nk]' (a split on '].[' left 'Order Date]': never matched)
+                m = QREF.match(f.get('column', ''))
+                inner = m.group(2) if m else strip_brackets(f.get('column', ''))
+                pi = parse_instance(inner)
+                k = (d['name'], pi[1] if pi else inner)
                 if k in self.cols:
                     add(k, 'datasource-filter')
         # transitive closure through calculations

@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- Bhayankar source fixture: synthetic workbook, not real data -->
+<workbook source-build='2025.1.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+
+  <datasources>
+    <datasource caption='Aliased Orders' inline='true' name='federated.al1' version='18.1'>
+      <connection class='federated'>
+        <named-connections><named-connection caption='sqlprod' name='sqlserver.0d'><connection class='sqlserver' dbname='SALES' schema='dbo' server='sqlprod.example.local' /></named-connection></named-connections>
+        <relation connection='sqlserver.0d' name='ORDERS' table='[dbo].[ORDERS]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'><remote-name>Region</remote-name><local-name>[Region]</local-name><parent-name>[ORDERS]</parent-name><local-type>string</local-type></metadata-record>
+          <metadata-record class='column'><remote-name>Sales</remote-name><local-name>[Sales]</local-name><parent-name>[ORDERS]</parent-name><local-type>real</local-type></metadata-record>
+        </metadata-records>
+      </connection>
+      <column datatype='string' name='[Region]' role='dimension' type='nominal'><aliases><alias key='&quot;East&quot;' value='Eastern Region' /><alias key='&quot;West&quot;' value='Western Region' /></aliases></column>
+      <column aggregation='Sum' datatype='real' name='[Sales]' role='measure' type='quantitative'></column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sales by Region'>
+      <table>
+        <view>
+          <datasources><datasource caption='Aliased Orders' name='federated.al1' /></datasources>
+          <datasource-dependencies datasource='federated.al1'><column-instance column='[Region]' derivation='None' name='[none:Region:nk]' pivot='key' type='nominal' /><column-instance column='[Sales]' derivation='Sum' name='[sum:Sales:qk]' pivot='key' type='quantitative' /></datasource-dependencies>
+          <filter class='categorical' column='[federated.al1].[none:Region:nk]'><groupfilter function='member' level='[none:Region:nk]' member='&quot;East&quot;' user:ui-enumeration='inclusive' /></filter>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes><pane><view><breakdown value='auto' /></view><mark class='Bar' /></pane></panes>
+        <rows>[federated.al1].[none:Region:nk]</rows>
+        <cols>[federated.al1].[sum:Sales:qk]</cols>
+      </table>
+    </worksheet>
+  </worksheets>
+  <windows>
+    <window class='worksheet' name='Sales by Region' />
+  </windows>
+</workbook>

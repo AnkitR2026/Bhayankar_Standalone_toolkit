@@ -1172,6 +1172,13 @@ class Rebuild:
                 v = self.infer_visual(ws)
                 v.update({'id': 'v00', 'sheet': ws['name'], 'position': {'x': 0, 'y': 0, 'width': 1280, 'height': 720},
                           'title': self.title(ws, ws['name'])})
+                # the sheet's own filters, as for a sheet on a dashboard (a worksheet tab used to lose them)
+                vf = [self.filter_spec(f) for f in ws['filters'] if not f['rule'].startswith('ALL')]
+                bf = self.blend_filter(ws) if v.get('visualType') not in ('help-icon', 'shape', None) else None
+                vf += [bf] if bf else []
+                if vf:
+                    v['visual_filters'] = vf
+                self.add_param_dim_filters(v)
                 v['catalog_errors'] = self.check(v)
                 pages.append({'name': ws['name'], 'width': 1280, 'height': 720, 'visible': True, 'visuals': [v],
                               'slicers': [], 'static': [], 'page_filters': [], 'notes': ['worksheet tab, not a dashboard']})
@@ -1435,6 +1442,20 @@ class Rebuild:
         model = {'tables': list(tables.values()), 'relationships': rels, 'url_columns': self.url_columns,
                  'parameters': [{'name': p['name'], **(p.get('powerbi') or {})} for p in self.res['parameters']],
                  'parameter_dimensions': list(self.param_dims.values()), 'notes': []}
+        # Tableau data source filters (every sheet of the source sees only these rows) -> bhayankar_build.datasource_filters
+        dsf = []
+        for ds in self.res['datasources']:
+            for f in ds.get('filters') or []:
+                if not f.get('field') or (f.get('rule') or '').startswith('ALL'):
+                    continue
+                prev, self._ws = getattr(self, '_ws', None), {'datasources': [ds['name']]}
+                try:
+                    fs = self.filter_spec({**f, 'ds': ds['name']})
+                finally:
+                    self._ws = prev
+                dsf.append({**fs, 'datasource': ds['name']})
+        if dsf:
+            model['datasource_filters'] = dsf
         if self.res.get('blends'):
             # Tableau blend links -> one shared dimension per linked field (bhayankar_build.blend_dimensions)
             model['blend_links'] = self.res['blends']
