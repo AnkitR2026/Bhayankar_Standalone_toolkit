@@ -127,10 +127,43 @@ def uc3():
     return workbook([d], [sheet('Sales by Region', n, 'Aliased Orders', ['Region'], ['Sales'], flt)])
 
 
+def uc4():
+    """Dashboard layout: a Top 3 filter by a measure, a zone hidden on the dashboard (show/hide layer) and a text object
+    holding a parameter value."""
+    n = 'federated.lay1'
+    d = ds(n, 'Layout Orders',
+           "<named-connection caption='sqlprod' name='sqlserver.0d'><connection class='sqlserver' dbname='SALES' schema='dbo' "
+           "server='sqlprod.example.local' /></named-connection>",
+           "<relation connection='sqlserver.0d' name='ORDERS' table='[dbo].[ORDERS]' type='table' />", 'ORDERS',
+           [('State', 'string', 'dimension', None, ''), ('Sales', 'real', 'measure', None, '')],
+           extra="      <column caption='Total Sales' datatype='real' name='[Calculation_77]' role='measure' type='quantitative'>"
+                 "<calculation class='tableau' formula='SUM([Sales])' /></column>")
+    params = ("    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>\n"
+              "      <column caption='Metric' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' "
+              "type='nominal' value='&quot;Sales&quot;'><calculation class='tableau' formula='&quot;Sales&quot;' />"
+              "<members><member value='&quot;Sales&quot;' /><member value='&quot;Profit&quot;' /></members></column>\n    </datasource>")
+    topn = (f"          <filter class='categorical' column='[{n}].[none:State:nk]'><groupfilter count='3' end='top' function='end' "
+            f"units='records' user:ui-marker='end'><groupfilter direction='DESC' expression='[Calculation_77]' function='order'>"
+            f"<groupfilter function='level-members' level='[none:State:nk]' /></groupfilter></groupfilter></filter>\n")
+    s1 = sheet('Top States', n, 'Layout Orders', ['State'], ['Sales'], topn)
+    s2 = sheet('Alt States', n, 'Layout Orders', ['State'], ['Sales'])
+    wb = workbook([params, d], [s1, s2])
+    dash = ("  <dashboards>\n    <dashboard name='Main'>\n      <size maxheight='800' maxwidth='1000' minheight='800' minwidth='1000' "
+            "sizing-mode='fixed' />\n      <zones><zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'>"
+            "<zone h='10000' id='2' type-v2='text' w='100000' x='0' y='0'><formatted-text><run>&lt;[Parameters].[Parameter 1]&gt;"
+            "</run><run> by State</run></formatted-text></zone>"
+            "<zone h='90000' id='3' name='Top States' w='100000' x='0' y='10000' />"
+            "<zone h='90000' hidden-by-user='true' id='4' name='Alt States' w='100000' x='0' y='10000' />"
+            "</zone></zones>\n    </dashboard>\n  </dashboards>\n")
+    wb = wb.replace('  <windows>', dash + '  <windows>').replace("<window class='worksheet' name='Top States' />",
+                                                                    "<window class='dashboard' name='Main' />")
+    return wb.replace("<window class='worksheet' name='Alt States' />", '')
+
+
 if __name__ == '__main__':
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
-    for fn, f in (('src_uc1_connectors', uc1), ('src_uc2_ds_filters', uc2), ('src_uc3_aliases', uc3)):
+    for fn, f in (('src_uc1_connectors', uc1), ('src_uc2_ds_filters', uc2), ('src_uc3_aliases', uc3), ('src_uc4_layout', uc4)):
         with open(os.path.join(out, fn + '.twb'), 'w', encoding='utf-8') as fh:
             fh.write(f())
         print('wrote', fn)

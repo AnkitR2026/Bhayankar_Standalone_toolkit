@@ -123,3 +123,40 @@ class Aliases(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Layout(unittest.TestCase):
+    """Dashboard layout (1.7.0): Tableau Top N filters, zones hidden on the dashboard, text holding a parameter."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.b, cls.root, cls.sm = build('src_uc4_layout')
+        cls.vis = []
+        for f in glob.glob(os.path.join(cls.root, 'o', 'src_uc4_layout', 'pbip', '*.Report', 'definition', 'pages', '*',
+                                        'visuals', '*', 'visual.json')):
+            with open(f, encoding='utf-8') as fh:
+                cls.vis.append(json.load(fh))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    def test_top_n_filter_by_a_measure(self):
+        topn = [x for v in self.vis for x in (v.get('filterConfig') or {}).get('filters', []) if x['type'] == 'TopN']
+        self.assertEqual(len(topn), 1)
+        sub = topn[0]['filter']['From'][0]['Expression']['Subquery']['Query']
+        self.assertEqual((sub['Top'], sub['OrderBy'][0]['Direction'], sub['OrderBy'][0]['Expression']['Measure']['Property']),
+                         (3, 2, 'Total Sales'))  # the order-by calc is saved bare ([Calculation_77]) and only used here
+        self.assertEqual(mc.check(self.sm)['errors'], [])
+
+    def test_a_zone_hidden_on_the_dashboard_is_hidden(self):
+        hidden = [v for v in self.vis if v.get('isHidden')]
+        self.assertEqual([v['visual']['visualType'] for v in hidden], ['clusteredBarChart'])
+
+    def test_text_with_a_parameter_is_a_dynamic_card(self):
+        cards = [v for v in self.vis if v['visual']['visualType'] == 'card']
+        self.assertEqual(len(cards), 1)
+        self.assertNotIn('<[', json.dumps(self.vis))  # no raw Tableau token left anywhere
+        m = cards[0]['visual']['query']['queryState']['Values']['projections'][0]['field']['Measure']['Property']
+        self.assertIn('[Metric Value]', self.b.measures[m]['dax'])
+        self.assertIn('" by State"', self.b.measures[m]['dax'])

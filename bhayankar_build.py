@@ -2212,6 +2212,8 @@ class Build:
             for v in p['visuals']:
                 vis = self.safe(p, f'visual {v.get("sheet")}', self.visual, p, v, tooltip_pages)
                 if vis:
+                    if v.get('tableau_hidden'):  # hidden on the Tableau dashboard (a show/hide layer): hidden here too
+                        vis['isHidden'] = True
                     visuals.append(vis)
                     if v['visualType'] not in ('help-icon', 'shape', None, 'custom'):
                         data_visuals.append(vis['name'])
@@ -2219,6 +2221,8 @@ class Build:
             for st in p['static']:
                 vis = self.safe(p, f'static {st.get("type")}', self.static, p, st, report)
                 if vis:
+                    if st.get('hidden'):
+                        vis['isHidden'] = True
                     visuals.append(vis)
             for nb in p.get('nav_buttons', []):  # Tableau filter action from a sheet with no dimension: opens the page
                 host = next((x for x in visuals if sheet_of.get(x['name']) == nb['sheet']), None)
@@ -2950,6 +2954,22 @@ class Build:
                 'objects': {'general': [{'properties': {'paragraphs': [{'textRuns': [{'value': st['text'], 'textStyle': {
                     'fontFamily': 'Segoe UI', 'fontSize': '18pt', 'color': DARK}}], 'horizontalTextAlignment': 'center'}]}}]},
                 'visualContainerObjects': {'background': [{'properties': {'show': boolean(False)}}], 'padding': padding(0)}}}
+        if st['type'] == 'dyntext' and st.get('measure'):
+            # Tableau text with a field / parameter inside ('<[Param:Metric]> YTD by State'): a card showing the text
+            # measure, no category label, no background (reads like the text object)
+            mname = self.rename(st['measure'])
+            mt = (self.measures.get(mname) or {}).get('table')
+            if not mt:
+                self.log.append(f'{p["name"]}: dynamic text measure [{mname}] not in the model; text not generated')
+                return None
+            return {'name': hid(f'{p["name"]}:dyntext:{mname}'), 'position': pos, 'visual': {
+                'visualType': 'card',
+                'query': {'queryState': {'Values': {'projections': [proj(meas_ref(mt, mname))]}}},
+                'objects': {'categoryLabels': [{'properties': {'show': boolean(False)}}],
+                            'labels': [{'properties': {'fontSize': num(14), 'color': colour(DARK)}}],
+                            'wordWrap': [{'properties': {'show': boolean(True)}}]},
+                'visualContainerObjects': {'background': [{'properties': {'show': boolean(False)}}], 'padding': padding(0),
+                                           'title': [{'properties': {'show': boolean(False)}}]}}}
         self.log.append(f'{p["name"]}: static {st["type"]} not generated')
         return None
 

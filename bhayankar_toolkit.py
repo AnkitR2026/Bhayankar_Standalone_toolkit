@@ -13,7 +13,7 @@ Python 3 standard library only.
 import os
 
 NAME = 'Bhayankar Standalone Toolkit'
-VERSION = '1.6.0'
+VERSION = '1.7.0'
 RELEASED = '2026-11-07'
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESOURCES = os.path.join(HERE, 'resources')

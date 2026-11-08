@@ -413,7 +413,7 @@ Each tool works on its own.
 - **Source connectors:** without a warehouse in `sources.json`, each table reads its Tableau source with the matching Power Query connector (Snowflake, SQL Server, Excel, text/CSV, Oracle, PostgreSQL, MySQL, Teradata, Redshift); credentials are asked on the first refresh. With `"warehouse": {"server": ...}` (or `"connector": "warehouse"`) every table reads the warehouse as before. Published sources without their `.tds`, and other types, read the warehouse (`DECISION NEEDED` for other types).
 - **Data source filters** become Power Query row filters on their table; when that table filters others (one side of a relationship), or the field is a calc / relative date, the filter also goes on every page. Aggregate data source filters are `DECISION NEEDED`.
 - **Value aliases** become a display column `<column> (alias)` used on axes, legends and rows; filters, slicers and DAX keep the source values.
-- **Not built yet:** hierarchies, display folders, sorts by a measure on tables, numeric bins, show/hide zone bookmarks, week-start and fiscal-year settings. They are listed in the digest.
+- **Not built yet:** hierarchies, display folders, sorts by a measure on tables, numeric bins, show/hide bookmarks and buttons (hidden zones are hidden visuals), week-start and fiscal-year settings. They are listed in the digest.
 - **Filters** the extractor can't read stay as a note for a person.
 - **Free-text parameters** are fixed to their default value.
 - **Verify** needs Windows, Power BI Desktop and Windows PowerShell. The rest of the toolkit runs anywhere Python does.

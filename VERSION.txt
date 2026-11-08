@@ -1,4 +1,4 @@
-Bhayankar Standalone Toolkit 1.6.0 (2026-11-08)
+Bhayankar Standalone Toolkit 1.7.0 (2026-11-08)
 Forked from the Bhayankar toolkit (Kiro edition) at commit a365047, an earlier fix branch.
 1.1.0: the 29 Kiro bug-hunt fixes of 2026-11-02 merged in (Kiro commit 0470900, branch fix/bug-hunt-2026-11-02).
 1.2.0: improvement round of 2026-11-04 (docs\PROJECT_LOG.md): sheet filters, joins without the .tds, visual fields,
@@ -20,3 +20,6 @@ Forked from the Bhayankar toolkit (Kiro edition) at commit a365047, an earlier f
        sheet filters; data-source-filter columns count as used. Not in Kiro.
        1.6.0 also: path budget and validator measure the full Windows path (8.3 short names let a 261-char file
        through; Desktop could not open it). First Power BI Desktop load check of 1.4-1.6 builds: 0 errors.
+1.7.0: verify on real data (visual filters + Top N in the engine query, checker fixes); Tableau Top N filters built;
+       zones hidden on the dashboard are hidden visuals; text with fields/parameters becomes a dynamic card.
+       Superstore 2026 on its own extract: 137 numbers match, 0 differ in Power BI Desktop. Not in Kiro.

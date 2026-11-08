@@ -1083,7 +1083,7 @@ class Rebuild:
                 if it['type'] == 'sheet' and it['name'] in by_ws:
                     ws = by_ws[it['name']]
                     v = self.infer_visual(ws)
-                    v.update({'id': f'v{i:02d}', 'sheet': ws['name'], 'position': pos,
+                    v.update({'id': f'v{i:02d}', 'sheet': ws['name'], 'position': pos, 'tableau_hidden': bool(it.get('hidden')),
                               'title': {**self.title(ws, ws['name']), 'show': it['show_title']}})
                     if any(p.get('labels_shown') for p in ws['panes']) and \
                             v['visualType'] not in ('pivotTable', 'tableEx', 'cardVisual', 'help-icon', None):
@@ -1139,7 +1139,7 @@ class Rebuild:
                         fs = self.filter_spec(saved)
                         default = {'values': fs.get('values') or (fs.get('members', []) + [f'{a}..{b}' for a, b in fs.get('ranges', [])]),
                                    'inverted': fs.get('inverted'), 'tableau': saved['rule'], 'note': fs.get('note')}
-                    page['slicers'].append({'id': f's{i:02d}', 'visualType': vt, 'mode': mode, 'selection': sel,
+                    page['slicers'].append({'id': f's{i:02d}', 'visualType': vt, 'mode': mode, 'selection': sel, 'hidden': bool(it.get('hidden')),
                                             'field': fr, 'position': pos, 'default': default,
                                             'applies_to_sheet': it['name'], 'sync_group': fr['name'],
                                             'tableau_field': it['field'],
@@ -1158,8 +1158,16 @@ class Rebuild:
                     text = it['text'] or (d['name'] if it['type'] == 'title' else None)
                     if text:  # a dashboard text object's <Sheet Name> is the dashboard's own name
                         text = text.replace('<Sheet Name>', d['name'].strip())
-                    page['static'].append({'type': kind, 'position': pos, 'text': text,
-                                           'image': it['field'] if it['type'] == 'bitmap' else None})
+                    st = {'type': kind, 'position': pos, 'text': text, 'hidden': bool(it.get('hidden')),
+                          'image': it['field'] if it['type'] == 'bitmap' else None}
+                    if kind == 'textbox' and text and re.search(r'<\[[^\]]+\]>', text):
+                        # '<[Param:Metric]> YTD by State': Tableau fills in the value; Power BI shows a measure's text
+                        dyn = self.title({'title': text}, f'{d["name"].strip()} text {i:02d}')
+                        if dyn.get('measure'):
+                            st.update({'type': 'dyntext', 'measure': dyn['measure']})
+                        else:
+                            st['text'] = dyn.get('text') or ''
+                    page['static'].append(st)
                 elif it['type'] in ('color', 'size', 'shape'):
                     for v in page['visuals']:
                         if v['sheet'] == it['name']:

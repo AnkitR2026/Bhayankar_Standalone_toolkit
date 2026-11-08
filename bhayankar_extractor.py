@@ -876,6 +876,12 @@ class Workbook:
                     add((ds, strip_brackets(c.get('name'))), w)
             for k in self._refs_in(ws):
                 add(k, w)
+            for f in ws.iter('filter'):  # a Top N 'order by' calc is saved bare ([Calculation_77], no data source)
+                fm = QREF.match(f.get('column', ''))
+                for g in f.iter('groupfilter'):
+                    om = re.fullmatch(r'\[([^\[\]]+)\]', (g.get('expression') or '').strip()) if g.get('function') == 'order' else None
+                    if fm and om and (fm.group(1), om.group(1)) in self.cols:
+                        add((fm.group(1), om.group(1)), w)
         for db in self.root.findall('./dashboards/dashboard'):
             for k in self._refs_in(db):
                 add(k, 'dashboard:' + db.get('name').strip())
