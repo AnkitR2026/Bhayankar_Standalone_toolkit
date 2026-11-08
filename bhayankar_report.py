@@ -923,6 +923,14 @@ class Rebuild:
             out.update({'type': 'Advanced' if rule.startswith('RANGE') else 'RelativeDate'})
         elif rule.startswith(('TOP', 'BOTTOM')):
             out.update({'type': 'TopN', 'note': 'Top N filter: by the measure in the rule'})
+            # 'TOP 3 BY  OF ORDER BY [c.selected Metric | YTD] DESC ALL' -> keep the 3 members with the highest measure
+            tm = re.match(r'^(TOP|BOTTOM) (\d+) BY .*?ORDER BY \[(.+?)\] (ASC|DESC)\b', rule)
+            if tm:
+                by = self.field_of(tm.group(3), f.get('ds'), True)
+                if by.get('kind') == 'Measure':
+                    # highest first when Tableau keeps the top of a descending order (or the bottom of an ascending one)
+                    out.update({'n': int(tm.group(2)), 'by': by, 'descending': (tm.group(1) == 'TOP') == (tm.group(4) == 'DESC'),
+                                'note': None})
         else:
             out.update({'type': 'Manual', 'note': 'translate this filter by hand (union/range/except)'})
         c = self.calcs.get(f['field'])

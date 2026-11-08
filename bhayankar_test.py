@@ -114,7 +114,9 @@ def sim(a, b):
 
 
 def oid(t, n):
-    return f"'{t}'[{n}]" if t else f'[{n}]'
+    """DAX reference: a ']' in a name is written ']]', a "'" in a table name "''" (measure [1-[Ratio]] -> [1-[Ratio]]])."""
+    n = str(n).replace(']', ']]')
+    return f"'{str(t).replace(chr(39), chr(39) * 2)}'[{n}]" if t else f'[{n}]'
 
 
 def strip_dax(e):
@@ -587,6 +589,11 @@ class Tester:
                     out.append(k)
             return out
         base = inner if fn in AGG_LABEL else label
+        # a model object with exactly this name first: the name matching below ignores symbols, so "c.Profit YTD -"
+        # would otherwise stand for "c.Profit | YTD" and "Delta -" for "Delta +"
+        for name in dict.fromkeys((label, base)):  # the whole label too: the build names constants 'MIN(0.2)'
+            low = name.strip().lower()
+            out.extend(k for k in list(self.all_meas) + list(self.all_cols) if str(k[1]).strip().lower() == low)
         if base in self.calc_match and self.calc_match[base][1]:
             out.append(self.calc_match[base][1])
         if len(self.calc_versions.get(base, ())) > 1:
@@ -1534,12 +1541,17 @@ class Tester:
                     for label, ex in (('Power BI export', pexp), ('Tableau export', texp)):
                         if not ex:
                             continue
-                        tot = self.export_total(ex, r, m)
+                        text = isinstance(exp_v, str)  # a label calc ("$69.7K"): compare the text, not a number read from it
+                        tot = self.export_total(ex, r, m, raw=text)
                         if tot is None:
                             details.append(f'{label}: no total for this measure')
                             continue
-                        ok = num_match(exp_v, tot)
-                        actual.append(f'{label}: {tot[0]:g}{"%" if tot[2] else ""}')
+                        if text:
+                            ok = key_norm(exp_v) == key_norm(tot)
+                            actual.append(f'{label}: {tot}')
+                        else:
+                            ok = num_match(exp_v, tot)
+                            actual.append(f'{label}: {tot[0]:g}{"%" if tot[2] else ""}')
                         status = 'FAIL' if not ok else (status or 'PASS')
                     status = status or 'MANUAL'
                     actual, details = '; '.join(actual), '; '.join(details)
@@ -1591,6 +1603,16 @@ class Tester:
                 measures.append(f'"{m}", {dfn}({oid(*col)})')
             else:
                 notes.append(f'// no Power BI measure for {m}')
+        # a field twice on one sheet (Profit as a header and as a value, two MIN(0.0) spacers): DAX accepts each group
+        # column and each result name once ("specified more than once" / "same name with an existing column")
+        groups = list(dict.fromkeys(groups))
+        seen, uniq = set(), []
+        for x in measures:
+            name = x.split('", ', 1)[0].lower()
+            if name not in seen:
+                seen.add(name)
+                uniq.append(x)
+        measures = uniq
         self.dax_parts[sheet] = {'groups': list(groups), 'measures': list(measures), 'notes': list(notes),
                                  'filters': list(r['filters']), 'dims': list(r['dims'])}
         body = ',\n    '.join(groups + measures)
@@ -1650,16 +1672,29 @@ class Tester:
         return {norm(x) for x in out if x}
 
     def column_for(self, headers, label, taken):
+        # the exact name first: norm() drops symbols, so "Delta -" and "Delta +" (or "% Sales" and "Sales") are one key
+        exact = str(label).strip().lower()
+        for i, h in enumerate(headers):
+            if i not in taken and str(h).strip().lower() == exact:
+                return i
         al = self.aliases(label)
         for i, h in enumerate(headers):
             if i not in taken and norm(h) in al:
                 return i
+        digits = re.findall(r'\d+(?:\.\d+)?', str(label))
         for i, h in enumerate(headers):
-            if i not in taken and max((sim(h, a) for a in [label, label_parts(label)[1]]), default=0) >= 0.85:
+            if i not in taken and max((sim(h, a) for a in [label, label_parts(label)[1]]), default=0) >= 0.85 \
+                    and re.findall(r'\d+(?:\.\d+)?', str(h)) == digits:  # "min(0.2)" is not "min(2.0)"
                 return i
         return None
 
-    def export_total(self, ex, r, m):
+    def export_total(self, ex, r, m, raw=False):
+        """The export's total of measure m: parse_num(cell), or the cell text itself (raw=True: a text measure such as
+        a "$69.7K" label, which parse_num would read as the number 69.7)."""
+        if raw:
+            conv = lambda v: None if v is None else str(v).strip()  # noqa: E731
+        else:
+            conv = parse_num
         taken = set()
         dcols = [self.column_for(ex['headers'], d, taken) for d in r['dims']]
         mi = self.column_for(ex['headers'], m, set(x for x in dcols if x is not None))
@@ -1672,9 +1707,9 @@ class Tester:
                 return None
         for row in ex['rows']:
             if any(str(c).strip().lower() in ('grand total', 'total') for c in row[:max(1, len(r['dims']))]):
-                return parse_num(row[mi]) if mi < len(row) else None
+                return conv(row[mi]) if mi < len(row) else None
         if not r['dims'] and ex['rows']:
-            return parse_num(ex['rows'][0][mi])
+            return conv(ex['rows'][0][mi])
         return None
 
     def compare_export(self, sheet, r, ex, label):

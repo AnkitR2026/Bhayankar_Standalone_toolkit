@@ -399,6 +399,146 @@ def table_files(folder):
             if isinstance(cfg, dict) and cfg.get('file')}
 
 
+# ---------- the visual's own filters as DAX (so a sheet with Tableau filters can be compared) ----------
+CMP = {0: '=', 1: '>', 2: '>=', 3: '<', 4: '<='}
+
+
+def dax_literal(v):
+    """PBIR literal text -> DAX: 'East' -> "East", 12D / 12L / 12M -> 12, true -> TRUE, datetime'2024-01-01T00:00:00'."""
+    s = str(v)
+    if s in ('null', 'None'):
+        return 'BLANK()'
+    if s in ('true', 'false'):
+        return s.upper() + '()'
+    m = re.fullmatch(r"datetime'(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})[^']*)?'", s)
+    if m:
+        y, mo, d, h, mi, se = (int(x) if x else 0 for x in m.groups())
+        return f'DATE({y}, {mo}, {d})' + (f' + TIME({h}, {mi}, {se})' if h or mi or se else '')
+    m = re.fullmatch(r'(-?\d+(?:\.\d+)?)[DLM]?', s)
+    if m:
+        return m.group(1)
+    if len(s) >= 2 and s[0] == s[-1] == "'":
+        return '"' + s[1:-1].replace("''", "'").replace('"', '""') + '"'
+    return None
+
+
+def pbir_filter_dax(f):
+    """One PBIR filter (visual / page / report filterConfig entry) -> a DAX filter table for CALCULATETABLE /
+    SUMMARIZECOLUMNS, or (None, why) when it cannot be written (a measure, a relative date, another shape)."""
+    fl = f.get('filter') or {}
+    if f.get('type') == 'TopN':
+        # {'TOPN': (n, column, measure, desc)}: written by visual_filters_dax over the visual's other filters
+        try:
+            sub = next(x for x in fl['From'] if 'Expression' in x)['Expression']['Subquery']['Query']
+            se = {x['Name']: x['Entity'] for x in sub['From']}
+            c = sub['Select'][0]['Column']
+            ob = sub['OrderBy'][0]
+            ms = ob['Expression']['Measure']
+            q = lambda e, p: f"'{e.replace(chr(39), chr(39) * 2)}'[{p.replace(']', ']]')}]"  # noqa: E731
+            return {'TOPN': (int(sub['Top']), q(se[c['Expression']['SourceRef']['Source']], c['Property']),
+                             f"[{ms['Property'].replace(']', ']]')}]", ob.get('Direction') == 2)}, None
+        except (KeyError, StopIteration, TypeError, ValueError):
+            return None, 'a Top N filter of another shape'
+    ents = {x.get('Name'): x.get('Entity') for x in fl.get('From', [])}
+    col = None
+
+    def expr(e):
+        nonlocal col
+        if 'Column' in e:
+            c = e['Column']
+            ent = ents.get(((c.get('Expression') or {}).get('SourceRef') or {}).get('Source')) or \
+                ((c.get('Expression') or {}).get('SourceRef') or {}).get('Entity')
+            ref = f"'{ent.replace(chr(39), chr(39) * 2)}'[{c.get('Property', '').replace(']', ']]')}]"
+            if col not in (None, ref):
+                raise ValueError('a condition over two columns')
+            col = ref
+            return ref
+        if 'Measure' in e or 'Aggregation' in e:
+            raise ValueError('a measure filter (applies to the visual\'s rows, not written here)')
+        if 'Literal' in e:
+            lit = dax_literal((e['Literal'] or {}).get('Value'))
+            if lit is None:
+                raise ValueError(f'literal {e["Literal"]}')
+            return lit
+        raise ValueError('unsupported expression')
+
+    def cond(c):
+        if 'Not' in c:
+            return f'NOT ({cond(c["Not"]["Expression"])})'
+        if 'And' in c:
+            return f'({cond(c["And"]["Left"])} && {cond(c["And"]["Right"])})'
+        if 'Or' in c:
+            return f'({cond(c["Or"]["Left"])} || {cond(c["Or"]["Right"])})'
+        if 'In' in c:
+            ex = [expr(x) for x in c['In'].get('Expressions', [])]
+            if len(ex) != 1:
+                raise ValueError('a multi-column In filter')
+            vals = [expr(row[0]) for row in c['In'].get('Values', []) if row]
+            return f'{ex[0]} IN {{{", ".join(vals)}}}'
+        if 'Comparison' in c:
+            k = c['Comparison'].get('ComparisonKind')
+            left, right = expr(c['Comparison']['Left']), expr(c['Comparison']['Right'])
+            if right == 'BLANK()' and k == 0:
+                return f'ISBLANK({left})'
+            return f'{left} {CMP[k]} {right}'
+        if 'Between' in c:
+            raise ValueError('a relative date filter')
+        raise ValueError('unsupported condition')
+    try:
+        parts = [cond(w.get('Condition') or {}) for w in fl.get('Where', [])]
+    except (ValueError, KeyError) as e:
+        return None, str(e)
+    if not parts or col is None:
+        return None, 'empty filter'
+    return f'FILTER(ALL({col}), {" && ".join(parts)})', None
+
+
+def visual_filters_dax(pbip, vis, page_id):
+    """DAX filter tables for everything that filters a visual: its own filters, its page's and the report's.
+    (None, why) when any of them cannot be written: the comparison would not be fair."""
+    defs = glob.glob(os.path.join(os.path.dirname(pbip), '*.Report', 'definition'))
+    if not defs or not vis:
+        return None, 'visual not found in the report'
+    d = defs[0]
+    srcs = [os.path.join(d, 'pages', page_id or '', 'visuals', vis.get('id') or '', 'visual.json'),
+            os.path.join(d, 'pages', page_id or '', 'page.json'), os.path.join(d, 'report.json')]
+    out = []
+    for p in srcs:
+        if not os.path.isfile(p):
+            continue
+        with open(p, encoding='utf-8') as fh:
+            j = json.load(fh)
+        for f in (j.get('filterConfig') or {}).get('filters', []):
+            if not f.get('filter'):
+                continue  # a filter card with nothing selected
+            dax, why = pbir_filter_dax(f)
+            if dax is None:
+                return None, why
+            out.append(dax)
+    plain = [x for x in out if isinstance(x, str)]
+    for t in [x['TOPN'] for x in out if isinstance(x, dict)]:
+        # Power BI ranks the members under the visual's other filters, then keeps the first N
+        n, col, ms, desc = t
+        rank = f'TOPN({n}, VALUES({col}), CALCULATE({ms}), {"DESC" if desc else "ASC"})'
+        plain.append(f'CALCULATETABLE({rank}{"".join(", " + x for x in plain)})' if plain else rank)
+    return plain, None
+
+
+def page_slicer_fields(pbip, page_id):
+    """Field names the slicers of one report page filter (their selection is interactive: not applied by verify)."""
+    out = set()
+    for vj in glob.glob(os.path.join(os.path.dirname(pbip), '*.Report', 'definition', 'pages', page_id or '-', 'visuals', '*',
+                                     'visual.json')):
+        try:
+            with open(vj, encoding='utf-8') as fh:
+                v = json.load(fh).get('visual') or {}
+        except (OSError, ValueError):
+            continue
+        if 'slicer' in (v.get('visualType') or '').lower():
+            out.update(re.findall(r'"Property":\s*"((?:[^"\\]|\\.)*)"', json.dumps(v.get('query') or {})))
+    return out
+
+
 def numbers(name, pbip, port, out_dir, work, log):
     """Tester pass 1 (oracle + queries), engine run, tester pass 2 with the engine results as Power BI exports."""
     import bhayankar_test as btst
@@ -429,13 +569,28 @@ def numbers(name, pbip, port, out_dir, work, log):
         if not p['measures']:
             skipped.append({'sheet': sheet, 'why': 'no Power BI measure matched the Tableau measures'})
             continue
+        flt = []
         if p['filters']:
-            skipped.append({'sheet': sheet, 'why': 'Tableau filters (' + ' AND '.join(p['filters'])[:200] + ') are slicers or '
-                                                  'visual filters in Power BI; the query does not apply them'})
-            continue
-        queries.append({'id': f'total:{sheet}', 'dax': 'EVALUATE ROW(' + ', '.join(p['measures']) + ')'})
+            # Tableau's filters are applied on the expected side: apply the Power BI visual's own filters (visual, page,
+            # report) on this side, so a difference means the migrated filter is wrong. Slicers are not applied.
+            vis = next((v for (_, s), v in t1.vis_match.items() if s == sheet and v), None)
+            flt, why = visual_filters_dax(pbip, vis, (vis or {}).get('page'))
+            sl = page_slicer_fields(pbip, (vis or {}).get('page')) if flt is not None else set()
+            on_slicer = [f for f in p['filters'] if any(f.startswith(s + ' ') or f.startswith(s + '(') for s in sl)]
+            if flt is None or on_slicer:
+                skipped.append({'sheet': sheet, 'why': 'Tableau filters (' + ' AND '.join(p['filters'])[:200] + ') ' +
+                                (f'cannot be applied to the Power BI query: {why}' if flt is None else
+                                 'include a slicer on the page (' + ', '.join(on_slicer)[:120] + '); the query does not '
+                                 'apply slicer selections')})
+                continue
+            # no filter of its own and no slicer: the build folded the Tableau filter into the measures (a parameter
+            # calc), so the measures already apply it; a filter the build dropped shows up as a difference
+            p['pbi_filters'] = flt
+        ft = ''.join(', ' + x for x in flt)
+        queries.append({'id': f'total:{sheet}', 'dax': ('EVALUATE CALCULATETABLE(ROW(' + ', '.join(p['measures']) + ')' + ft + ')')
+                        if flt else 'EVALUATE ROW(' + ', '.join(p['measures']) + ')'})
         if p['groups']:
-            queries.append({'id': f'rows:{sheet}', 'dax': 'EVALUATE SUMMARIZECOLUMNS(' + ', '.join(p['groups'] + p['measures']) + ')'})
+            queries.append({'id': f'rows:{sheet}', 'dax': 'EVALUATE SUMMARIZECOLUMNS(' + ', '.join(p['groups'] + flt + p['measures']) + ')'})
     rr = run_queries(port, queries, work=work)['results'] if queries else {}
     for sheet, p in sorted(t1.dax_parts.items()):
         tot = rr.get(f'total:{sheet}')
@@ -538,7 +693,9 @@ def render(st):
               '(Data sheet).', '']
         if n['failures']:
             L += ['| Check | Sheet: field | Tableau logic | Power BI | Details |', '|---|---|---|---|---|']
-            L += [f'| {f["test"]} | {f["object"]} | {f["expected"]} | {f["actual"]} | {str(f["details"])[:160]} |' for f in n['failures']]
+            cell = lambda v: str(v).replace('|', '\\|')  # noqa: E731  field names may hold '|' (Tableau "l.Profit | YTD")
+            L += [f'| {cell(f["test"])} | {cell(f["object"])} | {cell(f["expected"])} | {cell(f["actual"])} | '
+                  f'{cell(str(f["details"])[:160])} |' for f in n['failures']]
         if n['skipped']:
             L += ['', 'Not compared automatically (check these by hand with the matching slicer selections):', '']
             L += [f'- **{s["sheet"]}**: {s["why"]}' for s in n['skipped']]

@@ -408,7 +408,8 @@ def field_refs(obj, aliases=None):
 def filter_info(f, aliases=None):
     """PBIR filter -> {field, type, values, not, how, hidden, condition}."""
     fl = f.get('filter') or {}
-    al = {fr['Name']: fr['Entity'] for fr in fl.get('From', []) if fr.get('Name')}
+    # a Top N filter's 'subquery' source has no Entity (it is a query): only table sources are aliases
+    al = {fr['Name']: fr['Entity'] for fr in fl.get('From', []) if fr.get('Name') and fr.get('Entity')}
     al.update(aliases or {})
     refs = field_refs(f.get('field') or {}, al)
     vals, neg, cond = [], False, None
@@ -576,7 +577,7 @@ def report_from_legacy(path):
                    'filters': [filter_info(x) for x in (js(vc.get('filters')) or [])], 'nav': None, 'text': None,
                    'sort': None, 'slicer_selection': None, 'slicer_header': None, 'slicer_mode': None, 'ref_lines': False}
             q = sv.get('prototypeQuery') or {}
-            al = {fr['Name']: fr['Entity'] for fr in q.get('From', []) if fr.get('Name')}
+            al = {fr['Name']: fr['Entity'] for fr in q.get('From', []) if fr.get('Name') and fr.get('Entity')}
             names = {}
             for sel in q.get('Select', []):
                 for ref in field_refs(sel, al):

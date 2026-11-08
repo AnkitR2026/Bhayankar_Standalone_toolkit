@@ -939,12 +939,28 @@ class Workbook:
                    (f'OF {self.gf(inner)}' if inner is not None else '')
         if f == 'order':
             inner = e.find('./groupfilter')
-            return f'ORDER BY {self.resolve_text(e.get("expression"))} {e.get("direction", "")} ' + (self.gf(inner) if inner is not None else '')
+            return f'ORDER BY {self.order_expr(e.get("expression"))} {e.get("direction", "")} ' + (self.gf(inner) if inner is not None else '')
         return f'{f}({lvl})'
+
+    def order_expr(self, expr):
+        """Top N 'order by' field: '[ds].[sum:Sales:qk]', or a bare '[Calculation_123]' of the filter's own data source
+        (Tableau saves the Top N 'by field' calc without its source) -> its readable label."""
+        expr = expr or ''
+        if QREF.search(expr):
+            return self.resolve_text(expr)
+        m = re.fullmatch(r'\[([^\[\]]+)\]', expr.strip())
+        ds = getattr(self, '_gf_ds', None)
+        if m and ds:
+            n = m.group(1)
+            if (ds, n) in self.cols:
+                return f'[{self.disp(ds, n)}]'
+            return f'[{self.resolve_ref(ds, n)}]'
+        return expr
 
     def describe_filter(self, f):
         col = f.get('column', '')
         m = QREF.match(col)
+        self._gf_ds = m.group(1) if m else None  # Top N 'order by' calcs are saved without their data source
         label = self.resolve_ref(m.group(1), m.group(2)) if m else col
         cls = f.get('class')
         if cls == 'categorical':

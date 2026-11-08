@@ -2371,8 +2371,17 @@ class Build:
         return False
 
     def filter_ok(self, x):
-        ents = {s.get('Entity') for s in (x.get('filter') or {}).get('From', [])}
-        return self.field_ok(x.get('field', {})) and all(e in self.model_cols for e in ents)
+        ents, measures = set(), []
+        for s in (x.get('filter') or {}).get('From', []):
+            sub = ((s.get('Expression') or {}).get('Subquery') or {}).get('Query')
+            if sub:  # a Top N filter's subquery: its tables and the measure it ranks by must resolve
+                ents |= {t.get('Entity') for t in sub.get('From', [])}
+                measures += [o['Expression']['Measure'].get('Property') for o in sub.get('OrderBy', [])
+                             if 'Measure' in (o.get('Expression') or {})]
+            else:
+                ents.add(s.get('Entity'))
+        return self.field_ok(x.get('field', {})) and all(e in self.model_cols for e in ents) and \
+            all(m in self.measures for m in measures)
 
     def report_guard(self, page, visuals):
         """Drop report bindings that do not resolve in the model (a missing table, a measure used as a column
@@ -2773,12 +2782,40 @@ class Build:
             upper = {'DateSpan': {'Expression': at(f['last']), 'TimeUnit': unit}}
         return lower, upper
 
+    def topn_filter(self, f, key):
+        """Tableau Top N filter (keep the N members with the highest / lowest measure) -> PBIR TopN visual filter: the
+        column IN a subquery that orders the column's members by the measure and keeps the first N."""
+        table, name = f['field']['table'], f['field']['name']
+        mname = self.rename(f['by']['name'])
+        mtable = (self.measures.get(mname) or {}).get('table') or f['by'].get('table')
+        if not table or not mtable or mname not in self.measures:
+            self.log.append(f'filter on {name} (TopN) not generated: the measure [{mname}] is not in the model')
+            return None
+        sub_from = [{'Name': 'c', 'Entity': table, 'Type': 0}]
+        if mtable != table:
+            sub_from.append({'Name': 'm', 'Entity': mtable, 'Type': 0})
+        col_in = lambda src: {'Column': {'Expression': {'SourceRef': {'Source': src}}, 'Property': name}}  # noqa: E731
+        sub = {'Version': 2, 'From': sub_from, 'Select': [{**col_in('c'), 'Name': 'field'}],
+               'OrderBy': [{'Direction': 2 if f.get('descending', True) else 1,
+                            'Expression': {'Measure': {'Expression': {'SourceRef': {'Source': 'm' if mtable != table else 'c'}},
+                                                       'Property': mname}}}],
+               'Top': int(f['n'])}
+        self.log.append(f'filter on {name}: Tableau Top {f["n"]} by [{mname}] -> Power BI Top N visual filter')
+        return {'name': fid(key), 'field': col_ref(table, name), 'type': 'TopN',
+                'filter': {'Version': 2,
+                           'From': [{'Name': 'subquery', 'Expression': {'Subquery': {'Query': sub}}, 'Type': 2},
+                                    {'Name': 'f', 'Entity': table, 'Type': 0}],
+                           'Where': [{'Condition': {'In': {'Expressions': [col_in('f')],
+                                                           'Table': {'SourceRef': {'Source': 'subquery'}}}}}]}}
+
     def categorical_filter(self, f, key):
         """One Tableau sheet / page filter -> PBIR filter: Categorical (members), Advanced (blank, range, or a
         comparison on a measure) or RelativeDate. None (logged) when it cannot be expressed."""
         kind = f.get('type')
         if kind == 'All':
             return None  # Tableau range over every value, nulls included: no filter
+        if kind == 'TopN' and f.get('by') and f.get('n') and f['field'].get('kind') == 'Column':
+            return self.topn_filter(f, key)
         alias = 'f'
         table, name = f['field'].get('table'), f['field']['name']
         is_measure = f['field'].get('kind') == 'Measure'
